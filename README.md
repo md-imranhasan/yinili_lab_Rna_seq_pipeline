@@ -122,6 +122,7 @@ So now you have:
 module --force purge
 
 module load biocontainers
+module load sra-tools/2.11.0-pl5262
 
 module load fastqc/0.11.9
 
