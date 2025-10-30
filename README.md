@@ -139,6 +139,9 @@ module load multiqc
 
 #SRA fastq download
 
+fasterq-dump SRR8375448/SRR8375448.sra -O fastq/ --threads 32
+
+
 while read SRR; do echo "Downloading $SRR ..."; fasterq-dump "$SRR" -O fastq/; done < ALS_list.txt
 
 I want to use threads 32
