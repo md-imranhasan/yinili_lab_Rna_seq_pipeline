@@ -129,3 +129,14 @@ module load fastqc/0.11.9
 vdb-config --prefetch-to-cwd
 
 module load fastqc
+
+
+
+
+
+
+#SRA fastq download
+while read SRR; do echo "Downloading $SRR ..."; fasterq-dump "$SRR" -O fastq/; done < ALS_list.txt
+
+I want to use threads 32
+
