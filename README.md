@@ -129,6 +129,7 @@ module load fastqc/0.11.9
 vdb-config --prefetch-to-cwd
 
 module load fastqc
+module load multiqc
 
 
 
