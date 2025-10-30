@@ -1,0 +1,16 @@
+What it does (step-by-step):
+
+Extracts the Run column from SraRunTable_Frontal_Cortex.csv → metadata_srr.txt
+
+Lists all FASTQ files ending with _1.fastq, removes the suffix → fastq_srr.txt
+
+Prints:
+
+Missing: → accessions in metadata but no FASTQ
+
+Extra: → FASTQs not listed in metadata
+
+Unpaired: → samples missing either _1.fastq or _2.fastq
+
+
+awk -F',' 'NR==1{for(i=1;i<=NF;i++) if($i=="Run") c=i; next} NR>1 && c{print $c}' ../../SraRunTable_Frontal_Cortex.csv | sort -u > metadata_srr.txt && ls *_1.fastq | sed 's/_1\.fastq$//' | sort -u > fastq_srr.txt && echo "Missing:" && comm -23 metadata_srr.txt fastq_srr.txt && echo "Extra:" && comm -13 metadata_srr.txt fastq_srr.txt && echo "Unpaired:" && while read s; do [[ -f ${s}_1.fastq && -f ${s}_2.fastq ]] || echo "$s"; done < fastq_srr.txt
