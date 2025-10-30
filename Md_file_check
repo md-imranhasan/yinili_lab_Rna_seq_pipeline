@@ -1,5 +1,17 @@
 What it does (step-by-step):
 
+
+You’re in:
+
+/depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/case/fastq
+
+
+Your metadata file is:
+
+/depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/SraRunTable_Frontal_Cortex.csv
+
+
+
 Extracts the Run column from SraRunTable_Frontal_Cortex.csv → metadata_srr.txt
 
 Lists all FASTQ files ending with _1.fastq, removes the suffix → fastq_srr.txt
