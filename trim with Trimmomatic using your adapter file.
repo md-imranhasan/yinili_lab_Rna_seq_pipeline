@@ -1,0 +1,156 @@
+Absolutely—let’s trim with **Trimmomatic** using your adapter file.
+
+You’re here:
+
+```
+/depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/case/fastq
+```
+
+Adapters are here:
+
+```
+/depot/yinili/data/Li_lab/GSE124439_Hammell2019/adapters/TruSeq3-PE.fa
+```
+
+## Step 1 — Load Trimmomatic
+
+(Use whichever exists on your cluster.)
+
+```bash
+module --force purge
+module load biocontainers
+module load trimmomatic/0.39  # if available
+# If not available, try: module avail trimmomatic
+```
+
+## Step 2 — Make an output folder
+
+```bash
+mkdir -p ../trim_trimmomatic ../logs
+```
+
+## Step 3 — Run Trimmomatic for **all paired-end samples**
+
+Copy–paste this **single loop** (keeps it simple, uses 8 threads per sample):
+
+```bash
+for r1 in *_1.fastq; do
+  base=${r1%_1.fastq}
+  r2=${base}_2.fastq
+  echo ">> Trimming $base ..."
+  trimmomatic PE -threads 8 -phred33 \
+    "${base}_1.fastq" "${base}_2.fastq" \
+    "../trim_trimmomatic/${base}_1.paired.fq.gz" "../trim_trimmomatic/${base}_1.unpaired.fq.gz" \
+    "../trim_trimmomatic/${base}_2.paired.fq.gz" "../trim_trimmomatic/${base}_2.unpaired.fq.gz" \
+    ILLUMINACLIP:/depot/yinili/data/Li_lab/GSE124439_Hammell2019/adapters/TruSeq3-PE.fa:2:30:10 \
+    SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:36 \
+    2> "../logs/${base}.trimmomatic.log"
+done
+```
+
+### What those settings mean (quick):
+
+* `ILLUMINACLIP:...:2:30:10` → use your **TruSeq3-PE.fa** adapters; allow 2 mismatches, seed 30, palindrome clip 10
+* `SLIDINGWINDOW:4:20` → if 4-bp window drops below Q20, trim from there
+* `LEADING:3 TRAILING:3` → trim low-quality bases at read ends (Q<3)
+* `MINLEN:36` → drop reads shorter than 36 bp after trimming
+* Outputs:
+
+  * `*.paired.fq.gz` → **use these** for downstream steps
+  * `*.unpaired.fq.gz` → optional; keep for records
+  * Logs in `../logs/*.trimmomatic.log`
+
+## Step 4 — Sanity check trimmed outputs
+
+```bash
+echo "Paired R1:" $(ls ../trim_trimmomatic/*_1.paired.fq.gz | wc -l)
+echo "Paired R2:" $(ls ../trim_trimmomatic/*_2.paired.fq.gz | wc -l)
+```
+
+These counts should match the number of SRRs.
+
+## (Optional) SLURM job version
+
+If you prefer submitting to the scheduler:
+
+```bash
+cat > run_trimmomatic_case.slurm <<'EOF'
+#!/bin/bash
+#SBATCH -A myallocation
+#SBATCH -t 12:00:00
+#SBATCH -N 1
+#SBATCH -n 8
+#SBATCH --job-name=trim_case
+#SBATCH --output=trim_case-%J.out
+#SBATCH --error=trim_case-%J.err
+
+module --force purge
+module load biocontainers
+module load trimmomatic/0.39
+
+cd /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/case/fastq
+mkdir -p ../trim_trimmomatic ../logs
+
+for r1 in *_1.fastq; do
+  base=${r1%_1.fastq}
+  trimmomatic PE -threads 8 -phred33 \
+    "${base}_1.fastq" "${base}_2.fastq" \
+    "../trim_trimmomatic/${base}_1.paired.fq.gz" "../trim_trimmomatic/${base}_1.unpaired.fq.gz" \
+    "../trim_trimmomatic/${base}_2.paired.fq.gz" "../trim_trimmomatic/${base}_2.unpaired.fq.gz" \
+    ILLUMINACLIP:/depot/yinili/data/Li_lab/GSE124439_Hammell2019/adapters/TruSeq3-PE.fa:2:30:10 \
+    SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:36 \
+    2> "../logs/${base}.trimmomatic.log"
+done
+EOF
+
+sbatch run_trimmomatic_case.slurm
+```
+
+## Step 5 — QC the trimmed reads (recommended)
+
+```bash
+module load fastqc/0.11.9 multiqc/1.14
+mkdir -p ../qc_trim
+fastqc ../trim_trimmomatic/*paired.fq.gz -t 8 -o ../qc_trim
+cd ../qc_trim && multiqc .
+```
+
+If we want the same for your **control** folder, just run the exact loop in `Frontal_Cortex/control/fastq` and adjust output paths (e.g., `../../control/trim_trimmomatic`).
+
+
+
+
+
+
+
+###############
+
+Here’s the **improved one-liner** version:
+
+```bash
+for r1 in *_1.fastq; do base=${r1%_1.fastq}; if [[ -f "../trim_trimmomatic/${base}_1.paired.fq.gz" && -f "../trim_trimmomatic/${base}_2.paired.fq.gz" ]]; then echo ">> Skipping $base (already trimmed)"; else echo ">> Trimming $base ..."; trimmomatic PE -threads 8 -phred33 "${base}_1.fastq" "${base}_2.fastq" "../trim_trimmomatic/${base}_1.paired.fq.gz" "../trim_trimmomatic/${base}_1.unpaired.fq.gz" "../trim_trimmomatic/${base}_2.paired.fq.gz" "../trim_trimmomatic/${base}_2.unpaired.fq.gz" ILLUMINACLIP:/depot/yinili/data/Li_lab/GSE124439_Hammell2019/adapters/TruSeq3-PE.fa:2:30:10 SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:36 2> "../logs/${base}.trimmomatic.log"; fi; done
+```
+
+---
+
+### 🧩 What This Does
+
+* Loops through all `*_1.fastq` files.
+* Checks if **both** trimmed paired files exist:
+
+  ```
+  ../trim_trimmomatic/${base}_1.paired.fq.gz
+  ../trim_trimmomatic/${base}_2.paired.fq.gz
+  ```
+* ✅ If both exist → **skip** the sample and print:
+
+  ```
+  >> Skipping SRR837xxxx (already trimmed)
+  ```
+* 🚀 Otherwise → runs **Trimmomatic** and logs the output.
+
+---
+
+💡 **Optional:** You can safely re-run this anytime; it will only trim the missing ones, perfect for large datasets or interrupted runs.
+
+
