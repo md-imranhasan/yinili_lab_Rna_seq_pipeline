@@ -1,0 +1,36 @@
+cat > run_trimmomatic_control.slurm <<'EOF'
+#!/bin/bash
+#SBATCH --job-name=trim_control
+#SBATCH --output=trim_control-%J.out
+#SBATCH --error=trim_control-%J.err
+#SBATCH --time=12:00:00
+#SBATCH --partition=cpu
+#SBATCH --account=pdrineas
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+
+module --force purge
+module load biocontainers
+module load trimmomatic/0.39
+
+cd /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/control/fastq
+mkdir -p ../trim_trimmomatic ../logs
+
+for r1 in *_1.fastq; do
+  base=${r1%_1.fastq}
+  if [[ -f ../trim_trimmomatic/${base}_1.paired.fq.gz && -f ../trim_trimmomatic/${base}_2.paired.fq.gz ]]; then
+    echo ">> Skipping $base (already trimmed)"
+  else
+    echo ">> Trimming $base ..."
+    trimmomatic PE -threads 8 -phred33 \
+      "${base}_1.fastq" "${base}_2.fastq" \
+      "../trim_trimmomatic/${base}_1.paired.fq.gz" "../trim_trimmomatic/${base}_1.unpaired.fq.gz" \
+      "../trim_trimmomatic/${base}_2.paired.fq.gz" "../trim_trimmomatic/${base}_2.unpaired.fq.gz" \
+      ILLUMINACLIP:/depot/yinili/data/Li_lab/GSE124439_Hammell2019/adapters/TruSeq3-PE.fa:2:30:10 \
+      SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:36 \
+      2> "../logs/${base}.trimmomatic.log"
+  fi
+done
+EOF
+
+sbatch run_trimmomatic_control.slurm
