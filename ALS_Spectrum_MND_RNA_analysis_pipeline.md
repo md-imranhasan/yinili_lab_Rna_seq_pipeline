@@ -18,7 +18,7 @@ The example focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions
 
 ## 📁 Directory Layout
 
-```
+```bash
 
 GSE124439_RNAseq/
 ├─ README.md
@@ -74,6 +74,7 @@ GSE124439_RNAseq/
    ├─ qc_reports/                    # final MultiQC HTMLs per region/group
    └─ summaries/                     # tables, plots (small files only)
 
+```
 ````
 ## 📊 Cohort & Subregions (GSE124439)
 
