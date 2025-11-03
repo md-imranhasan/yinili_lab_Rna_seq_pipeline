@@ -20,19 +20,59 @@ The example focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions
 
 ```
 
-/depot/yinili/data/Li_lab/GSE124439_Hammell2019/
-├── adapters/
-│   └── TruSeq3-PE.fa
-├── Frontal_Cortex/
-│   ├── case/
-│   │   ├── fastq/
-│   │   ├── qc/
-│   │   ├── trim_trimmomatic/
-│   │   └── logs/
-│   ├── control/
-│   └── SraRunTable_Frontal_Cortex.csv
-└── motor_cortex_(medial)/
-└── case/
+GSE124439_RNAseq/
+├─ README.md
+├─ .gitignore
+├─ docs/
+│  └─ cohort_summary.md              # counts per subregion/case-control
+├─ metadata/
+│  ├─ SraRunTable.csv                # master table (if you keep one)
+│  ├─ SraRunTable_Frontal_Cortex.csv
+│  ├─ SraRunTable_motor_cortex_lateral.csv
+│  ├─ SraRunTable_motor_cortex_medial.csv
+│  ├─ Frontal_cortex_case.txt
+│  ├─ Frontal_cortex_control.txt
+│  ├─ motor_cortex_lateral_case.txt
+│  ├─ motor_cortex_lateral_control.txt
+│  ├─ motor_cortex_medial_case.txt
+│  └─ motor_cortex_medial_control.txt
+├─ adapters/
+│  └─ TruSeq3-PE.fa                  # adapter file (text; OK to version)
+├─ scripts/
+│  ├─ download/
+│  │  ├─ prefetch_list.sh            # from list -> .sra cache
+│  │  └─ fasterq_from_list.sh        # from list -> FASTQ (threads configurable)
+│  ├─ qc/
+│  │  ├─ summary_check.sh            # your checker; run inside fastq/
+│  │  ├─ run_fastqc.sh
+│  │  └─ run_multiqc.sh
+│  ├─ trim/
+│  │  ├─ trimmomatic_params.md       # brief rationale of params
+│  │  ├─ run_trimmomatic_case.slurm
+│  │  └─ run_trimmomatic_control.slurm
+│  └─ util/
+│     └─ verify_fastq_vs_metadata.sh # comm-based cross-checks
+├─ regions/
+│  ├─ Frontal_Cortex/
+│  │  ├─ case/
+│  │  │  ├─ fastq/                   # (git-ignored)
+│  │  │  ├─ trim_trimmomatic/        # (git-ignored)
+│  │  │  ├─ qc/                      # (git-ignored)
+│  │  │  └─ logs/                    # (git-ignored)
+│  │  └─ control/
+│  │     ├─ fastq/                   # (git-ignored)
+│  │     ├─ trim_trimmomatic/        # (git-ignored)
+│  │     ├─ qc/                      # (git-ignored)
+│  │     └─ logs/                    # (git-ignored)
+│  ├─ motor_cortex_(lateral)/
+│  │  ├─ case/ ... (same as above)
+│  │  └─ control/ ... 
+│  └─ motor_cortex_(medial)/
+│     ├─ case/ ... 
+│     └─ control/ ...
+└─ results/
+   ├─ qc_reports/                    # final MultiQC HTMLs per region/group
+   └─ summaries/                     # tables, plots (small files only)
 
 ````
 ## 📊 Cohort & Subregions (GSE124439)
