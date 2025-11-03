@@ -256,6 +256,6 @@ You can now proceed to:
 
 ---
 
-Would you like me to extend this same file with the **next stage (Salmon quantification)** section so you can keep one continuous GitHub documentation?
+
 ```
 
