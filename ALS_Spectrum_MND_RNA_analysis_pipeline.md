@@ -18,7 +18,7 @@ The example focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions
 
 ## 📁 Directory Layout
 
-```bash
+```text
 
 GSE124439_RNAseq/
 ├─ README.md
