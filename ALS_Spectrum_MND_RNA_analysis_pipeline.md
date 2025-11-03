@@ -122,8 +122,46 @@ awk -F',' 'NR>1{print $1}' ../SraRunTable_Frontal_Cortex.csv | sort -u > metadat
 echo "Missing:" && comm -23 metadata_srr.txt fastq_srr.txt
 echo "Extra:"   && comm -13 metadata_srr.txt fastq_srr.txt
 ```
+🧾 Step 2.1 – Automatic FASTQ Verification Script
+Save this as summary_check.sh inside each fastq/ directory and run it with:
+```bash
+bash summary_check.sh
+```
 
+```bash
+# summary_check.sh (run inside the fastq/ folder)
+sort -u case_srr.txt > expected.txt
+ls -1 *_1.fastq 2>/dev/null | sed 's/_1\.fastq$//' | sort -u > actual_from_fastq.txt
+
+exp=$(wc -l < expected.txt)
+found=$(wc -l < actual_from_fastq.txt)
+echo "Expected SRR: $exp"
+echo "Found pairs : $found"
+
+echo "Missing:"
+comm -23 expected.txt actual_from_fastq.txt || true
+echo "Extra:"
+comm -13 expected.txt actual_from_fastq.txt || true
+
+echo "Unpaired:"
+while read SRR; do
+  [[ -f ${SRR}_1.fastq && -f ${SRR}_2.fastq ]] || echo "$SRR"
+done < expected.txt
+
+echo "Zero-byte FASTQs:"
+find . -maxdepth 1 -name "*.fastq" -size 0 -printf "%f\n"
+```
+🧩 Output Overview
+Check Type	Description
+Expected SRR	Number of accessions listed in case_srr.txt
+Found pairs	FASTQ pairs actually present in the folder
+Missing	SRR IDs not yet downloaded or converted
+Extra	FASTQs not listed in the metadata file
+Unpaired	Single-end files missing _1 or _2 partner
+Zero-byte FASTQs	Detects incomplete or failed downloads
 ---
+💡 Run this check after every fasterq-dump batch to confirm integrity before trimming.
+
 
 ## 🧪 Step 3 – Quality Control (FastQC + MultiQC)
 
