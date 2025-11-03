@@ -237,6 +237,32 @@ sbatch run_trimmomatic_case.slurm
 
 ---
 
+Here’s the **improved one-liner** version:
+
+```bash
+for r1 in *_1.fastq; do base=${r1%_1.fastq}; if [[ -f "../trim_trimmomatic/${base}_1.paired.fq.gz" && -f "../trim_trimmomatic/${base}_2.paired.fq.gz" ]]; then echo ">> Skipping $base (already trimmed)"; else echo ">> Trimming $base ..."; trimmomatic PE -threads 8 -phred33 "${base}_1.fastq" "${base}_2.fastq" "../trim_trimmomatic/${base}_1.paired.fq.gz" "../trim_trimmomatic/${base}_1.unpaired.fq.gz" "../trim_trimmomatic/${base}_2.paired.fq.gz" "../trim_trimmomatic/${base}_2.unpaired.fq.gz" ILLUMINACLIP:/depot/yinili/data/Li_lab/GSE124439_Hammell2019/adapters/TruSeq3-PE.fa:2:30:10 SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:36 2> "../logs/${base}.trimmomatic.log"; fi; done
+```
+
+---
+
+### 🧩 What This Does
+
+* Loops through all `*_1.fastq` files.
+* Checks if **both** trimmed paired files exist:
+
+  ```
+  ../trim_trimmomatic/${base}_1.paired.fq.gz
+  ../trim_trimmomatic/${base}_2.paired.fq.gz
+  ```
+* ✅ If both exist → **skip** the sample and print:
+
+  ```
+  >> Skipping SRR837xxxx (already trimmed)
+  ```
+* 🚀 Otherwise → runs **Trimmomatic** and logs the output.
+
+---
+
 ## 🧭 Job Monitoring on Negishi
 
 ```bash
