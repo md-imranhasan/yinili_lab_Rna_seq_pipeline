@@ -17,14 +17,11 @@ The example focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions
 ---
 
 ## 📁 Directory Layout
-
+## Repository layout
 ```text
 
 GSE124439_RNAseq/
-├─ README.md
-├─ .gitignore
-├─ docs/
-│  └─ cohort_summary.md              # counts per subregion/case-control
+           # counts per subregion/case-control
 ├─ metadata/
 │  ├─ SraRunTable.csv                # master table (if you keep one)
 │  ├─ SraRunTable_Frontal_Cortex.csv
@@ -68,12 +65,9 @@ GSE124439_RNAseq/
 │  │  ├─ case/ ... (same as above)
 │  │  └─ control/ ... 
 │  └─ motor_cortex_(medial)/
-│     ├─ case/ ... 
+│     ├─ case/ ... (same as above)
 │     └─ control/ ...
-└─ results/
-   ├─ qc_reports/                    # final MultiQC HTMLs per region/group
-   └─ summaries/                     # tables, plots (small files only)
-
+                   
 ```
 ````
 ## 📊 Cohort & Subregions (GSE124439)
