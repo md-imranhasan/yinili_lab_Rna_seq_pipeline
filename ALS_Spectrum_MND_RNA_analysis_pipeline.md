@@ -10,9 +10,9 @@ You can copy–paste this into a file named `README.md` in your project or GitHu
 ```markdown
 # 🧬 RNA-seq Processing Pipeline — GSE124439 (Hammell 2019)
 
-This repository documents a full end-to-end workflow for processing the **GSE124439** RNA-seq dataset  
-(`PRJNA512012`) using the Negishi HPC cluster at Purdue.  
-The example focuses on the **Frontal Cortex** and **Motor Cortex (Medial)** sub-regions.
+This repository documents a full end-to-end workflow for processing the GSE124439 RNA-seq dataset  
+('PRJNA512012') using the Negishi HPC cluster at Purdue.  
+The example focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions.
 
 ---
 
@@ -35,6 +35,25 @@ The example focuses on the **Frontal Cortex** and **Motor Cortex (Medial)** sub-
 └── case/
 
 ````
+## 📊 Cohort & Subregions (GSE124439)
+
+**Total samples: 162**
+
+| Subregion                 | Phenotype                         | Count | Group    |
+|--------------------------|-----------------------------------|------:|----------|
+| Frontal Cortex           | ALS Spectrum MND                  |   65  | Case     |
+| Frontal Cortex           | Non-Neurological Control          |    9  | Control  |
+| Motor Cortex (Lateral)   | ALS Spectrum MND                  |   37  | Case     |
+| Motor Cortex (Lateral)   | Non-Neurological Control          |    4  | Control  |
+| Motor Cortex (Medial)    | ALS Spectrum MND                  |   38  | Case     |
+| Motor Cortex (Medial)    | Non-Neurological Control          |    4  | Control  |
+| Motor Cortex (unspecified)| ALS Spectrum MND                 |    5  | Case     |
+
+**Totals:** Case = **145**, Control = **17**, Overall = **162**.
+
+> Notes:  
+> • “ALS Spectrum MND” is treated as **Case**; “Non-Neurological Control” as **Control**.  
+> • The final row (“Motor Cortex – 5 (ALS Spectrum MND)”) is listed as **Motor Cortex (unspecified)** because no lateral/medial label was provided in the summary above.
 
 ---
 
