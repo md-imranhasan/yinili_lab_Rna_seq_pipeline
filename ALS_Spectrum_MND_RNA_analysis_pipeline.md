@@ -219,142 +219,23 @@ multiqc .
 
 ---
 
-## ✂️ Step 4 – Trimming (Trimmomatic)
 
-### 4.1 Adapter location
 
-```
-/depot/yinili/data/Li_lab/GSE124439_Hammell2019/adapters/TruSeq3-PE.fa
-```
 
-### 4.2 Batch trimming script (`run_trimmomatic_case.slurm`)
+
+##I want to auto-detect adapters and trim your FASTQ files without using Slurm, the simplest one-liner approach is to use fastp — it automatically detects adapter sequences, trims low-quality bases, and generates QC reports.
+
+Here’s the one-liner you can run directly inside your fastq/ folder:
+
+mkdir -p ../trim_fastp ../qc_fastp && for f in *_1.fastq; do r=${f%_1.fastq}; fastp -i ${r}_1.fastq -I ${r}_2.fastq -o ../trim_fastp/${r}_1.trimmed.fastq -O ../trim_fastp/${r}_2.trimmed.fastq -h ../qc_fastp/${r}_fastp.html -j ../qc_fastp/${r}_fastp.json --detect_adapter_for_pe -w 8; done
+
 
 ```bash
-#!/bin/bash
-#SBATCH -A yini li
-#SBATCH -p cpu
-#SBATCH -N 1
-#SBATCH -n 8
-#SBATCH -t 12:00:00
-#SBATCH -J trim_case
-#SBATCH -o trim_case-%j.out
-#SBATCH -e trim_case-%j.err
-
-module --force purge
-module load biocontainers
-module load trimmomatic/0.39
-
-cd "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/motor_cortex_(medial)/case/fastq"
-mkdir -p ../trim_trimmomatic ../logs
-
-for r1 in *_1.fastq; do
-  base=${r1%_1.fastq}
-  if [[ -f "../trim_trimmomatic/${base}_1.paired.fq.gz" && -f "../trim_trimmomatic/${base}_2.paired.fq.gz" ]]; then
-      echo ">> Skipping $base (already trimmed)"
-  else
-      echo ">> Trimming $base ..."
-      trimmomatic PE -threads 8 -phred33 \
-        "${base}_1.fastq" "${base}_2.fastq" \
-        "../trim_trimmomatic/${base}_1.paired.fq.gz" "../trim_trimmomatic/${base}_1.unpaired.fq.gz" \
-        "../trim_trimmomatic/${base}_2.paired.fq.gz" "../trim_trimmomatic/${base}_2.unpaired.fq.gz" \
-        ILLUMINACLIP:/depot/yinili/data/Li_lab/GSE124439_Hammell2019/adapters/TruSeq3-PE.fa:2:30:10 \
-        SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:36 \
-        2> "../logs/${base}.trimmomatic.log"
-  fi
-done
-```
-
-Submit:
-
-```bash
-sbatch run_trimmomatic_case.slurm
-```
-
----
-
-Here’s the **improved one-liner** version:
-
-```bash
-for r1 in *_1.fastq; do base=${r1%_1.fastq}; if [[ -f "../trim_trimmomatic/${base}_1.paired.fq.gz" && -f "../trim_trimmomatic/${base}_2.paired.fq.gz" ]]; then echo ">> Skipping $base (already trimmed)"; else echo ">> Trimming $base ..."; trimmomatic PE -threads 8 -phred33 "${base}_1.fastq" "${base}_2.fastq" "../trim_trimmomatic/${base}_1.paired.fq.gz" "../trim_trimmomatic/${base}_1.unpaired.fq.gz" "../trim_trimmomatic/${base}_2.paired.fq.gz" "../trim_trimmomatic/${base}_2.unpaired.fq.gz" ILLUMINACLIP:/depot/yinili/data/Li_lab/GSE124439_Hammell2019/adapters/TruSeq3-PE.fa:2:30:10 SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:36 2> "../logs/${base}.trimmomatic.log"; fi; done
-```
-
----
-
-### 🧩 What This Does
-
-* Loops through all `*_1.fastq` files.
-* Checks if **both** trimmed paired files exist:
-
-  ```
-  ../trim_trimmomatic/${base}_1.paired.fq.gz
-  ../trim_trimmomatic/${base}_2.paired.fq.gz
-  ```
-* ✅ If both exist → **skip** the sample and print:
-
-  ```
-  >> Skipping SRR837xxxx (already trimmed)
-  ```
-* 🚀 Otherwise → runs **Trimmomatic** and logs the output.
-
----
-
-## 🧭 Job Monitoring on Negishi
-
-```bash
-squeue -u $USER
-squeue -j <jobid> -o "%.18i %.9P %.8j %.8u %.2t %.10M %.6D %R"
-sacct -j <jobid> --format=JobID,State,Elapsed,MaxRSS,AllocCPUS
-```
-
-* **PD (Priority)** → waiting in queue
-* **R (Running)** → active
-* **PartitionDown** → cluster maintenance
-* **Resources** → waiting for free nodes
-
----
-
-## 🧠 Trimming Parameters Explained
-
-| Parameter                            | Purpose                                   |
-| ------------------------------------ | ----------------------------------------- |
-| `ILLUMINACLIP:TruSeq3-PE.fa:2:30:10` | Removes Illumina adapters (≤2 mismatches) |
-| `SLIDINGWINDOW:4:20`                 | Cuts when 4-bp window drops below Q20     |
-| `LEADING:3 TRAILING:3`               | Trims low-quality ends                    |
-| `MINLEN:36`                          | Discards reads shorter than 36 bp         |
-
----
-
-## ✅ Step 5 – Post-Trim Quality Check (Optional)
-
-```bash
-module load fastqc/0.11.9 multiqc/1.14
-mkdir -p ../qc_trim
-fastqc ../trim_trimmomatic/*paired.fq.gz -t 8 -o ../qc_trim
-cd ../qc_trim && multiqc .
-```
-
-Compare pre- and post-trim quality to confirm adapter removal and tail improvement.
-
----
-
-## 🚀 Next Steps
-
-You can now proceed to:
-
-1. **Quantification** using *Salmon* (alignment-free)
-   or
-2. **Alignment + Counting** using *STAR* and *featureCounts*.
-
----
-
-**Author:** *Imran Hasan*
-**Cluster:** *Negishi (Purdue University)*
-**Date:** *November 2025*
-
-```
-
----
-
-
-```
-
+fastq/
+trim_fastp/
+    ├─ SRRXXXXXX_1.trimmed.fastq
+    ├─ SRRXXXXXX_2.trimmed.fastq
+qc_fastp/
+    ├─ SRRXXXXXX_fastp.html
+    ├─ SRRXXXXXX_fastp.json
+'''
