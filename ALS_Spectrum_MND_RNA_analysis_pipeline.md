@@ -31,8 +31,7 @@ GSE124439_RNAseq/
 │  ├─ motor_cortex_lateral_control.txt
 │  ├─ motor_cortex_medial_case.txt
 │  └─ motor_cortex_medial_control.txt
-├─ adapters/
-│  └─ TruSeq3-PE.fa                  # adapter file (text; OK to version)
+├        
 ├─ scripts/
 │  ├─ download/
 │  │  ├─ prefetch_list.sh            # from list -> .sra cache
