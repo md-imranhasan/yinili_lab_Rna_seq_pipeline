@@ -229,7 +229,7 @@ multiqc .
 
 ```bash
 #!/bin/bash
-#SBATCH -A pdrineas
+#SBATCH -A yini li
 #SBATCH -p cpu
 #SBATCH -N 1
 #SBATCH -n 8
