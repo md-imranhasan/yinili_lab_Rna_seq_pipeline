@@ -229,6 +229,11 @@ Here’s the one-liner you can run directly inside your fastq/ folder:
 
 mkdir -p ../trim_fastp ../qc_fastp && for f in *_1.fastq; do r=${f%_1.fastq}; fastp -i ${r}_1.fastq -I ${r}_2.fastq -o ../trim_fastp/${r}_1.trimmed.fastq -O ../trim_fastp/${r}_2.trimmed.fastq -h ../qc_fastp/${r}_fastp.html -j ../qc_fastp/${r}_fastp.json --detect_adapter_for_pe -w 8; done
 
+The command that:
+✅ auto-detects adapters
+✅ trims reads using fastp
+✅ saves trimmed FASTQs in trim_fastp/
+✅ saves QC reports in qc_fastp/
 
 ```bash
 fastq/
