@@ -139,8 +139,10 @@ done < Frontal_cortex_case.txt
 ```bash
 mkdir -p fastq
 for sra in SRR*/SRR*.sra; do
-  fasterq-dump "$sra" -O fastq/
+  echo "Processing $sra ..."
+  fasterq-dump --split-files "$sra" -O fastq/
 done
+
 ```
 
 ---
