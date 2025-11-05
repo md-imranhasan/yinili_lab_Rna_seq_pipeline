@@ -1,7 +1,7 @@
 Postmortem Cortex Samples Identify Distinct Molecular Subtypes of ALS: RNA-Seq Pipeline
 
 
- RNA-seq workflow **from raw SRA download to trimming with Trimmomatic** on the Negishi HPC cluster.
+ RNA-seq workflow **from raw SRA download to trimming with Fastp** on the Negishi HPC cluster.
 
 ---
 Md Imran Hasan (hasan128) | Yini Li Lab
