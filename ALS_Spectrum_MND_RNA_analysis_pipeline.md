@@ -1,4 +1,4 @@
-Postmortem Cortex Samples Identify Distinct Molecular Subtypes of ALS: RNA-Seq Pipeline
+## Postmortem Cortex Samples Identify Distinct Molecular Subtypes of ALS: RNA-Seq Pipeline
 
 
  RNA-seq workflow **from raw SRA download to trimming with Fastp** on the Negishi HPC cluster.
@@ -222,7 +222,7 @@ multiqc .
 
 
 
-##I want to auto-detect adapters and trim your FASTQ files without using Slurm, the simplest one-liner approach is to use fastp — it automatically detects adapter sequences, trims low-quality bases, and generates QC reports.
+## I want to auto-detect adapters and trim your FASTQ files without using Slurm, the simplest one-liner approach is to use fastp — it automatically detects adapter sequences, trims low-quality bases, and generates QC reports.
 
 Here’s the one-liner you can run directly inside your fastq/ folder:
 
