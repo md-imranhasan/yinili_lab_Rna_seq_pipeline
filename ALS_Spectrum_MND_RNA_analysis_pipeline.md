@@ -259,9 +259,9 @@ trim_fastp/
 qc_fastp/
     ├─ SRRXXXXXX_fastp.html
     ├─ SRRXXXXXX_fastp.json
-'''
+```
 
-#  Alignment (Mapping) with HISAT2
+## Alignment (Mapping) with HISAT2
 Align trimmed paired reads to the hg19 genome using HISAT2 (spliced aligner).
 Keep all uniquely mapped, properly paired reads.
 Remove duplicates (Picard) and mitochondrial/rRNA reads.
