@@ -304,6 +304,38 @@ Here’s our one-liner HISAT2 alignment command (ready to run inside your trim_f
 ```bash
 mkdir -p ../hisat2_align && for r1 in *_1.trimmed.fastq; do base=${r1%_1.trimmed.fastq}; echo ">> Aligning $base ..."; hisat2 -p 8 -x /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer/hg19.fa -1 ${base}_1.trimmed.fastq -2 ${base}_2.trimmed.fastq --summary-file ../hisat2_align/${base}_alignment_summary.txt --dta | samtools view -@ 8 -bS -o ../hisat2_align/${base}.bam; done
 ```
+sbatch
+```bash
+#!/bin/bash
+#SBATCH -A yinili               # Your account name
+#SBATCH -p cpu                  # Partition to use (adjust based on your cluster)
+#SBATCH -N 1                     # Number of nodes
+#SBATCH -n 32                    # Number of CPUs (32)
+#SBATCH -t 12:00:00              # Time limit (adjust as needed)
+#SBATCH -J hisat2_align_case     # Job name
+#SBATCH -o hisat2_align_case-%j.out  # Standard output file
+#SBATCH -e hisat2_align_case-%j.err  # Standard error file
+
+# Load necessary modules
+module load hisat2
+module load samtools
+
+# Create directory for output if it doesn't exist
+mkdir -p ../hisat2_align
+
+# Start alignment loop
+for r1 in *_1.trimmed.fastq; do
+  base=${r1%_1.trimmed.fastq}
+  echo ">> Aligning $base ..."
+  hisat2 -p 32 \
+    -x /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer/hg19.fa \
+    -1 ${base}_1.trimmed.fastq \
+    -2 ${base}_2.trimmed.fastq \
+    --summary-file ../hisat2_align/${base}_alignment_summary.txt \
+    --dta | samtools view -@ 32 -bS -o ../hisat2_align/${base}.bam
+done
+```
+
 ✅ What it does:
 Creates an output folder ../hisat2_align/
 Aligns each paired FASTQ (_1/_2) to hg19
