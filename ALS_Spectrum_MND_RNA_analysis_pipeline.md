@@ -299,4 +299,35 @@ hg19.fa.8.ht2
 
 ```
 
+Here’s our one-liner HISAT2 alignment command (ready to run inside your trim_fastp/ folder):
+
+```bash
+mkdir -p ../hisat2_align && for r1 in *_1.trimmed.fastq; do base=${r1%_1.trimmed.fastq}; echo ">> Aligning $base ..."; hisat2 -p 8 -x /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer/hg19.fa -1 ${base}_1.trimmed.fastq -2 ${base}_2.trimmed.fastq --summary-file ../hisat2_align/${base}_alignment_summary.txt --dta | samtools view -@ 8 -bS -o ../hisat2_align/${base}.bam; done
+```
+✅ What it does:
+Creates an output folder ../hisat2_align/
+Aligns each paired FASTQ (_1/_2) to hg19
+Produces:
+SRRxxxxxx.bam (aligned reads)
+SRRxxxxxx_alignment_summary.txt (alignment stats)
+
+
+
+📄 Each summary file contains lines like:
+
+```bash
+12345678 reads; of these:
+  12000000 (97.2%) were paired; of these:
+    11800000 (98.3%) aligned concordantly 0 times
+    35000 (0.3%) aligned concordantly exactly 1 time
+    30000 (0.25%) aligned concordantly >1 times
+98.8% overall alignment rate
+```
+
+It reports:
+Total reads processed
+% paired and mapped concordantly
+% discordant alignments
+Overall alignment rate
+
 
