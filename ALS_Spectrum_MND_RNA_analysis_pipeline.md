@@ -260,3 +260,43 @@ qc_fastp/
     ├─ SRRXXXXXX_fastp.html
     ├─ SRRXXXXXX_fastp.json
 '''
+
+#  Alignment (Mapping) with HISAT2
+Align trimmed paired reads to the hg19 genome using HISAT2 (spliced aligner).
+Keep all uniquely mapped, properly paired reads.
+Remove duplicates (Picard) and mitochondrial/rRNA reads.
+
+```bash
+hisat2-build hg19.fa hg19.fa
+```
+
+🧩 The general syntax
+```bash
+hisat2-build [options] <reference_in> <ht2_base>
+```
+<reference_in> → the FASTA file containing your genome (e.g. hg19.fa)
+<ht2_base> → the base name for the output index files that HISAT2 will create
+
+🧠 So in our case
+```bash
+hisat2-build hg19.fa hg19.fa
+```
+means:
+Input genome FASTA → hg19.fa
+Output index prefix (basename) → also hg19.fa
+
+
+HISAT2 will then create 8 index files named:
+```bash
+hg19.fa.1.ht2
+hg19.fa.2.ht2
+hg19.fa.3.ht2
+hg19.fa.4.ht2
+hg19.fa.5.ht2
+hg19.fa.6.ht2
+hg19.fa.7.ht2
+hg19.fa.8.ht2
+
+```
+
+
