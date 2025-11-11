@@ -305,6 +305,7 @@ Here’s our one-liner HISAT2 alignment command (ready to run inside your trim_f
 mkdir -p ../hisat2_align && for r1 in *_1.trimmed.fastq; do base=${r1%_1.trimmed.fastq}; echo ">> Aligning $base ..."; hisat2 -p 8 -x /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer/hg19.fa -1 ${base}_1.trimmed.fastq -2 ${base}_2.trimmed.fastq --summary-file ../hisat2_align/${base}_alignment_summary.txt --dta | samtools view -@ 8 -bS -o ../hisat2_align/${base}.bam; done
 ```
 sbatch
+
 ```bash
 #!/bin/bash
 #SBATCH -A yinili               # Your account name
@@ -334,6 +335,10 @@ for r1 in *_1.trimmed.fastq; do
     --summary-file ../hisat2_align/${base}_alignment_summary.txt \
     --dta | samtools view -@ 32 -bS -o ../hisat2_align/${base}.bam
 done
+```
+
+```bash
+sbatch hisat2_align.sbatch
 ```
 
 ✅ What it does:
