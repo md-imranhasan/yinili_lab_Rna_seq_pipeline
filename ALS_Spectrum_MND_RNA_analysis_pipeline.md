@@ -368,3 +368,52 @@ Total reads processed
 Overall alignment rate
 
 
+
+
+# Sort BAM files
+The aligned .bam files should be sorted by coordinate to ensure they’re ready for downstream analysis.
+
+
+```bash
+#!/bin/bash
+#SBATCH -A yang3099               # Your account name
+#SBATCH -p cpu                  # Partition to use (adjust based on your cluster)
+#SBATCH -N 1                     # Number of nodes
+#SBATCH -n 32                     # Number of CPUs (8 for samtools sort)
+#SBATCH -t 8:00:00               # Time limit (adjust as needed)
+#SBATCH -J sort_index_bam        # Job name
+#SBATCH -o sort_index_bam-%j.out # Standard output file
+#SBATCH -e sort_index_bam-%j.err # Standard error file
+
+# Load necessary modules
+module load samtools
+
+# Create a directory for sorted and indexed BAM files if it doesn't exist
+mkdir -p ../sorted_bam
+
+# Loop through all BAM files in ../hisat2_align/
+for bam in *.bam; do
+  base=$(basename $bam .bam)
+  echo ">> Sorting and indexing $base ..."
+  samtools sort -@ 32 -o ../sorted_bam/${base}.sorted.bam $bam
+  samtools index ../sorted_bam/${base}.sorted.bam
+done
+```
+
+SBATCH -A yinili: Your account for job allocation.
+SBATCH -p cpu: Partition to use (adjust if necessary).
+SBATCH -N 1: 1 node for the job.
+SBATCH -n 8: 8 CPUs for parallel processing (adjust based on your available cores and SAMtools usage).
+SBATCH -t 6:00:00: Time limit (adjust as per the expected job time).
+SBATCH -J sort_index_bam: Job name for easy identification.
+SBATCH -o sort_index_bam-%j.out: Standard output file with the job ID.
+SBATCH -e sort_index_bam-%j.err: Standard error file with the job ID.
+
+
+Result: Sorted BAM files will be saved in ../sorted_bam/.
+Indexed BAM files will also be available with .bai extensions in the same directory.
+
+
+
+
+
