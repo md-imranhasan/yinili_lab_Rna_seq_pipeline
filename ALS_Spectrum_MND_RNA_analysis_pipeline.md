@@ -68,11 +68,11 @@ GSE124439_RNAseq/
 │     └─ control/ ...
                    
 ```
-````
+
 ## 📊 Cohort & Subregions (GSE124439)
 
 ### Total samples: 162
-
+```
 | Subregion                 | Phenotype                         | Count | Group    |
 |--------------------------|-----------------------------------|------:|----------|
 | Frontal Cortex           | ALS Spectrum MND                  |   65  | Case     |
@@ -82,14 +82,14 @@ GSE124439_RNAseq/
 | Motor Cortex (Medial)    | ALS Spectrum MND                  |   38  | Case     |
 | Motor Cortex (Medial)    | Non-Neurological Control          |    4  | Control  |
 | Motor Cortex (unspecified)| ALS Spectrum MND                 |    5  | Case     |
-
-### Totals: Case = 145, Control = 17, Overall = 162.
+```
+#### Totals: Case = 145, Control = 17, Overall = 162.
 
 > Notes:  
 > • “ALS Spectrum MND” is treated as **Case**; “Non-Neurological Control” as **Control**.  
 > • The final row (“Motor Cortex – 5 (ALS Spectrum MND)”) is listed as **Motor Cortex (unspecified)** because no lateral/medial label was provided in the summary above.
 
----
+
 
 ## ⚙️ Environment Setup
 
