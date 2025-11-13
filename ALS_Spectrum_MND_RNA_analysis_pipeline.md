@@ -434,13 +434,13 @@ This script provides a batch processing pipeline for RNA-Seq BAM files. It cover
 ## Directory Structure
 
 The script expects the following directory structure:
-.
+```
 ├── process_bam.sbatch # SLURM job script
 ├── sorted_bam/ # Input folder containing sorted BAM files
 └── read_group_bam/ # Output folder for read group added BAM files
 └── marked_bam/ # Output folder for duplicate marked BAM files
 └── filtered_bam/ # Output folder for filtered BAM files
-
+```
 
 
 ## `process_bam.sbatch` Script
