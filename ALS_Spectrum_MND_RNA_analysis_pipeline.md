@@ -13,8 +13,8 @@ This repository documents a full end-to-end workflow for processing the GSE12443
 The example focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions.
 ```
 ---
-### This work flowing this paper: Postmortem cortex samples identify distinct molecular subtypes of ALS: Retrotransposon activation, oxidative stress, and activated glia. [DOI: 10.1016/j.celrep.2019.09.066](https://doi.org/10.1016/j.celrep.2019.09.066)
-
+### This work flowing this paper: 
+1. Postmortem cortex samples identify distinct molecular subtypes of ALS: Retrotransposon activation, oxidative stress, and activated glia. https://www.sciencedirect.com/science/article/pii/S221112471931263X?via%3Dihub
 
 ## 📁 Directory Layout
 ## Repository layout
@@ -71,7 +71,7 @@ GSE124439_RNAseq/
 ````
 ## 📊 Cohort & Subregions (GSE124439)
 
-**Total samples: 162**
+### Total samples: 162
 
 | Subregion                 | Phenotype                         | Count | Group    |
 |--------------------------|-----------------------------------|------:|----------|
@@ -83,7 +83,7 @@ GSE124439_RNAseq/
 | Motor Cortex (Medial)    | Non-Neurological Control          |    4  | Control  |
 | Motor Cortex (unspecified)| ALS Spectrum MND                 |    5  | Case     |
 
-**Totals:** Case = **145**, Control = **17**, Overall = **162**.
+### Totals: Case = 145, Control = 17, Overall = 162.
 
 > Notes:  
 > • “ALS Spectrum MND” is treated as **Case**; “Non-Neurological Control” as **Control**.  
