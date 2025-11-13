@@ -1,7 +1,7 @@
-## Postmortem Cortex Samples Identify Distinct Molecular Subtypes of ALS: RNA-Seq Pipeline
+# Postmortem Cortex Samples Identify Distinct Molecular Subtypes of ALS: RNA-Seq Pipeline
 
 
- RNA-seq workflow **from raw SRA download to trimming with Fastp** on the Negishi HPC cluster.
+ RNA-seq workflow **from raw SRA download** on the Negishi HPC cluster.
 
 ---
 Md Imran Hasan (hasan128) | Yini Li Lab
@@ -11,8 +11,10 @@ Md Imran Hasan (hasan128) | Yini Li Lab
 This repository documents a full end-to-end workflow for processing the GSE124439 RNA-seq dataset  
 ('PRJNA512012') using the Negishi HPC cluster at Purdue.  
 The example focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions.
-
+```
 ---
+### This work flowing this paper: Postmortem cortex samples identify distinct molecular subtypes of ALS: Retrotransposon activation, oxidative stress, and activated glia. DOI: 10.1016/j.celrep.2019.09.066
+
 
 ## 📁 Directory Layout
 ## Repository layout
@@ -103,7 +105,6 @@ module load fastqc/0.11.9
 module load multiqc/1.14
 ````
 
----
 
 ## 🪄 Step 1 – Configure and Download SRA Data
 
