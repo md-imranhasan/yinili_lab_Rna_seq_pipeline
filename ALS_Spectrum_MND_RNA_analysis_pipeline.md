@@ -9,8 +9,8 @@ Md Imran Hasan (hasan128) | Yini Li Lab
 ## 🧬 RNA-seq Processing Pipeline — GSE124439 (Hammell 2019)
 
 This repository documents a full end-to-end workflow for processing the GSE124439 RNA-seq dataset  
-('PRJNA512012') using the Negishi HPC cluster at Purdue.  
-The example focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions.
+('PRJNA512012') using the HPC cluster at Purdue.  
+This work focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions.
 ```
 ---
 ### This work flowing this paper: 
