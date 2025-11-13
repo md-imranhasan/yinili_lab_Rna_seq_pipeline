@@ -190,19 +190,12 @@ find . -maxdepth 1 -name "*.fastq" -size 0 -printf "%f\n"
 
 - **Expected SRR**  
   Number of accessions listed in `case_srr.txt`.
-
 - **Found pairs**  
   FASTQ pairs actually present in the folder.
-
 - **Missing**  
   SRR IDs not yet downloaded or converted.
-
 - **Extra**  
   FASTQs not listed in the metadata file.
-
-- **Unpaired**  
-  Single-end files missing `_1` or `_2` partner.
-
 - **Zero-byte FASTQs**  
   Detects incomplete or failed downloads.
 
