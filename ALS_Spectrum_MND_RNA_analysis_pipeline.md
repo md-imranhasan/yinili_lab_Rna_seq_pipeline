@@ -537,6 +537,6 @@ This step filters out mitochondrial and rRNA reads from the BAM files, which are
 
 ### Job Submission
 
-To submit this script to the SLURM scheduler, save the script as process_bam.sbatch and run the following command:
+To submit this script to the SLURM scheduler, save the script as process_bam.sbatch and run.
 
 
