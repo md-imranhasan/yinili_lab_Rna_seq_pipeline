@@ -5,8 +5,8 @@
 
 ---
 Md Imran Hasan (hasan128) | Yini Li Lab
-```markdown
-# 🧬 RNA-seq Processing Pipeline — GSE124439 (Hammell 2019)
+
+## 🧬 RNA-seq Processing Pipeline — GSE124439 (Hammell 2019)
 
 This repository documents a full end-to-end workflow for processing the GSE124439 RNA-seq dataset  
 ('PRJNA512012') using the Negishi HPC cluster at Purdue.  
