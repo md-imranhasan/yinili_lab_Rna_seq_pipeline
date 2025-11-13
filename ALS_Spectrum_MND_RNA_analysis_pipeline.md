@@ -437,9 +437,21 @@ The script expects the following directory structure:
 ```
 ├── process_bam.sbatch # SLURM job script
 ├── sorted_bam/ # Input folder containing sorted BAM files
-└── read_group_bam/ # Output folder for read group added BAM files
-└── marked_bam/ # Output folder for duplicate marked BAM files
+│ ├── sample1.sorted.bam
+│ ├── sample2.sorted.bam
+│ └── ... # More sorted BAM files
+├── read_group_bam/ # Output folder for read group added BAM files
+│ ├── sample1.rg.bam
+│ ├── sample2.rg.bam
+│ └── ... # More read group added BAM files
+├── marked_bam/ # Output folder for duplicate marked BAM files
+│ ├── sample1.marked.bam
+│ ├── sample2.marked.bam
+│ └── ... # More marked BAM files
 └── filtered_bam/ # Output folder for filtered BAM files
+├── sample1.filtered.bam
+├── sample2.filtered.bam
+└── ... # More filtered BAM files
 ```
 
 
