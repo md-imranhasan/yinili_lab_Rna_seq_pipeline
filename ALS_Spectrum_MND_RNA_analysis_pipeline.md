@@ -13,7 +13,7 @@ This repository documents a full end-to-end workflow for processing the GSE12443
 The example focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions.
 ```
 ---
-### This work flowing this paper: Postmortem cortex samples identify distinct molecular subtypes of ALS: Retrotransposon activation, oxidative stress, and activated glia. DOI: 10.1016/j.celrep.2019.09.066
+### This work flowing this paper: Postmortem cortex samples identify distinct molecular subtypes of ALS: Retrotransposon activation, oxidative stress, and activated glia. [DOI: 10.1016/j.celrep.2019.09.066](https://doi.org/10.1016/j.celrep.2019.09.066)
 
 
 ## 📁 Directory Layout
