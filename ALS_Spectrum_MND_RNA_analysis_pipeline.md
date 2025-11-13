@@ -416,4 +416,115 @@ Indexed BAM files will also be available with .bai extensions in the same direct
 
 
 
+# RNA-Seq BAM Processing Pipeline
+
+This script provides a batch processing pipeline for RNA-Seq BAM files. It covers the following steps:
+
+1. **Add Read Groups** to BAM files using Picard
+2. **Mark Duplicates** using Picard
+3. **Index BAM files** using Samtools
+4. **Remove mitochondrial and rRNA reads**
+
+## Requirements
+
+- **Picard**: For adding read groups and marking duplicates
+- **Samtools**: For BAM file indexing and filtering
+- **SLURM**: For batch job submission
+
+## Directory Structure
+
+The script expects the following directory structure:
+.
+├── process_bam.sbatch # SLURM job script
+├── sorted_bam/ # Input folder containing sorted BAM files
+└── read_group_bam/ # Output folder for read group added BAM files
+└── marked_bam/ # Output folder for duplicate marked BAM files
+└── filtered_bam/ # Output folder for filtered BAM files
+
+
+
+## `process_bam.sbatch` Script
+
+This script processes each sorted BAM file in the **`sorted_bam/`** directory by adding read groups, marking duplicates, indexing, and filtering mitochondrial and rRNA reads. Below is the full script:
+
+```bash
+#!/bin/bash
+#SBATCH -A yinili               # Your account name
+#SBATCH -p cpu                  # Partition to use (adjust based on your cluster)
+#SBATCH -N 1                     # Number of nodes
+#SBATCH -n 8                     # Number of CPUs (adjust based on your system)
+#SBATCH -t 6:00:00               # Time limit (adjust as needed)
+#SBATCH -J process_bam           # Job name
+#SBATCH -o process_bam-%j.out    # Standard output file
+#SBATCH -e process_bam-%j.err    # Standard error file
+
+# Load necessary modules
+module load samtools
+module load picard
+
+# Create directories for output files
+mkdir -p ../read_group_bam ../marked_bam ../filtered_bam
+
+# Loop through all sorted BAM files in the current directory
+for bam in *.sorted.bam; do
+  base=$(basename $bam .sorted.bam)
+  
+  # Add read groups using Picard
+  echo ">> Adding read groups to $base ..."
+  picard AddOrReplaceReadGroups \
+    I=$bam \
+    O=../read_group_bam/${base}.rg.bam \
+    RGID=$base \
+    RGLB=lib1 \
+    RGPL=illumina \
+    RGPU=unit1 \
+    RGSM=$base
+
+  # Mark duplicates using Picard
+  echo ">> Marking duplicates for $base ..."
+  picard MarkDuplicates \
+    I=../read_group_bam/${base}.rg.bam \
+    O=../marked_bam/${base}.marked.bam \
+    M=../marked_bam/${base}.marked_metrics.txt \
+    REMOVE_DUPLICATES=true
+
+  # Index the BAM file using Samtools
+  echo ">> Indexing BAM file for $base ..."
+  samtools index ../marked_bam/${base}.marked.bam
+
+  # Remove mitochondrial (chrM/MT) and rRNA reads
+  echo ">> Removing mitochondrial and rRNA reads from $base ..."
+  samtools view -h ../marked_bam/${base}.marked.bam | \
+    grep -v "chrM" | grep -v "MT" | \
+    samtools view -bS -o ../filtered_bam/${base}.filtered.bam
+  
+  # Index the filtered BAM file
+  samtools index ../filtered_bam/${base}.filtered.bam
+
+  echo ">> Finished processing $base."
+done
+```
+
+
+### Script Explanation
+1. Add Read Groups using Picard
+
+The AddOrReplaceReadGroups step adds read group information (important for RNA-seq and other analyses that require sample identification). The script includes details like library, platform, and sample name.
+
+2. Mark Duplicates using Picard
+
+The MarkDuplicates step removes PCR duplicates, which is important for avoiding bias in RNA-seq or sequencing data.
+
+3. Index the BAM files using Samtools
+
+The index command from Samtools is used to index the BAM files, which allows for faster access and querying.
+
+4. Remove mitochondrial (chrM/MT) and rRNA reads
+
+This step filters out mitochondrial and rRNA reads from the BAM files, which are often unnecessary for certain analyses. The grep -v "chrM" | grep -v "MT" removes mitochondrial reads, and additional filters can be added if needed.
+
+### Job Submission
+
+To submit this script to the SLURM scheduler, save the script as process_bam.sbatch and run the following command:
+
 
