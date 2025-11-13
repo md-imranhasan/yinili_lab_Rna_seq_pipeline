@@ -187,7 +187,7 @@ echo "Zero-byte FASTQs:"
 find . -maxdepth 1 -name "*.fastq" -size 0 -printf "%f\n"
 ```
 
-🧩 ##### Output Overview
+🧩 Output Overview
 ```
 Check Type	Description
 -- Expected SRR	Number of accessions listed in case_srr.txt
