@@ -225,12 +225,12 @@ multiqc .
 
 
 
-#### I want to auto-detect adapters and trim your FASTQ files without using Slurm, the simplest one-liner approach is to use fastp — it automatically detects adapter sequences, trims low-quality bases, and generates QC reports.
+### I want to auto-detect adapters and trim your FASTQ files without using Slurm, the simplest one-liner approach is to use fastp — it automatically detects adapter sequences, trims low-quality bases, and generates QC reports.
 
 Here’s the one-liner you can run directly inside your fastq/ folder:
-
+```bash
 mkdir -p ../trim_fastp ../qc_fastp && for f in *_1.fastq; do r=${f%_1.fastq}; fastp -i ${r}_1.fastq -I ${r}_2.fastq -o ../trim_fastp/${r}_1.trimmed.fastq -O ../trim_fastp/${r}_2.trimmed.fastq -h ../qc_fastp/${r}_fastp.html -j ../qc_fastp/${r}_fastp.json --detect_adapter_for_pe -w 8; done
-
+```
 
 
 ## Here’s the one-liner version that skips already processed files (if both trimmed outputs exist):
@@ -307,7 +307,7 @@ Here’s our one-liner HISAT2 alignment command (ready to run inside your trim_f
 ```bash
 mkdir -p ../hisat2_align && for r1 in *_1.trimmed.fastq; do base=${r1%_1.trimmed.fastq}; echo ">> Aligning $base ..."; hisat2 -p 8 -x /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer/hg19.fa -1 ${base}_1.trimmed.fastq -2 ${base}_2.trimmed.fastq --summary-file ../hisat2_align/${base}_alignment_summary.txt --dta | samtools view -@ 8 -bS -o ../hisat2_align/${base}.bam; done
 ```
-sbatch
+sbatch code:
 
 ```bash
 #!/bin/bash
@@ -339,18 +339,19 @@ for r1 in *_1.trimmed.fastq; do
     --dta | samtools view -@ 32 -bS -o ../hisat2_align/${base}.bam
 done
 ```
-
+Run the Code:
 ```bash
 sbatch hisat2_align.sbatch
 ```
 
 ✅ What it does:
+```
 Creates an output folder ../hisat2_align/
 Aligns each paired FASTQ (_1/_2) to hg19
 Produces:
 SRRxxxxxx.bam (aligned reads)
 SRRxxxxxx_alignment_summary.txt (alignment stats)
-
+```
 
 
 📄 Each summary file contains lines like:
@@ -402,7 +403,7 @@ for bam in *.bam; do
   samtools index ../sorted_bam/${base}.sorted.bam
 done
 ```
-
+```
 SBATCH -A yinili: Your account for job allocation.
 SBATCH -p cpu: Partition to use (adjust if necessary).
 SBATCH -N 1: 1 node for the job.
@@ -411,15 +412,13 @@ SBATCH -t 6:00:00: Time limit (adjust as per the expected job time).
 SBATCH -J sort_index_bam: Job name for easy identification.
 SBATCH -o sort_index_bam-%j.out: Standard output file with the job ID.
 SBATCH -e sort_index_bam-%j.err: Standard error file with the job ID.
-
+```
 
 Result: Sorted BAM files will be saved in ../sorted_bam/.
 Indexed BAM files will also be available with .bai extensions in the same directory.
 
 
-
-
-# RNA-Seq BAM Processing Pipeline
+# .BAM Processing Pipeline
 
 This script provides a batch processing pipeline for RNA-Seq BAM files. It covers the following steps:
 
@@ -522,24 +521,25 @@ done
 
 
 ### Script Explanation
-1. Add Read Groups using Picard
 
-The AddOrReplaceReadGroups step adds read group information (important for RNA-seq and other analyses that require sample identification). The script includes details like library, platform, and sample name.
+1.  **Add Read Groups using Picard**
+    The `AddOrReplaceReadGroups` step adds read group information (important for RNA-seq and other analyses that require sample identification). The script includes details like library, platform, and sample name.
 
-2. Mark Duplicates using Picard
+2.  **Mark Duplicates using Picard**
+    The `MarkDuplicates` step removes PCR duplicates, which is important for avoiding bias in RNA-seq or sequencing data.
 
-The MarkDuplicates step removes PCR duplicates, which is important for avoiding bias in RNA-seq or sequencing data.
+3.  **Index the BAM files using Samtools**
+    The `index` command from Samtools is used to index the BAM files, which allows for faster access and querying.
 
-3. Index the BAM files using Samtools
+4.  **Remove mitochondrial (chrM/MT) and rRNA reads**
+    This step filters out mitochondrial and rRNA reads from the BAM files, which are often unnecessary for certain analyses. The `grep -v "chrM" | grep -v "MT"` removes mitochondrial reads, and additional filters can be added if needed.
 
-The index command from Samtools is used to index the BAM files, which allows for faster access and querying.
-
-4. Remove mitochondrial (chrM/MT) and rRNA reads
-
-This step filters out mitochondrial and rRNA reads from the BAM files, which are often unnecessary for certain analyses. The grep -v "chrM" | grep -v "MT" removes mitochondrial reads, and additional filters can be added if needed.
+---
 
 ### Job Submission
 
-To submit this script to the SLURM scheduler, save the script as process_bam.sbatch and run.
+To submit this script to the SLURM scheduler, save the script as `process_bam.sbatch` and run:
 
+```bash
+sbatch process_bam.sbatch
 
