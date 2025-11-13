@@ -1,19 +1,16 @@
 # Postmortem Cortex Samples Identify Distinct Molecular Subtypes of ALS: RNA-Seq Pipeline
 
+RNA-seq workflow **from raw SRA download** on the HPC cluster (Purdue University).
 
- RNA-seq workflow **from raw SRA download** on the HPC cluster (Purdue University).
-
----
-Md Imran Hasan (hasan128) | Yini Li Lab
+## **Md Imran Hasan (hasan128) | Yini Li Lab**
 
 ## 🧬 RNA-seq Processing Pipeline — GSE124439 (Hammell 2019)
 
 This repository documents a full end-to-end workflow for processing the GSE124439 RNA-seq dataset  
 ('PRJNA512012') using the HPC cluster at Purdue.  
 This work focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions.
-```
----
-### This work flowing this paper: 
+
+This work flowing this paper: 
 1. Postmortem cortex samples identify distinct molecular subtypes of ALS: Retrotransposon activation, oxidative stress, and activated glia. https://www.sciencedirect.com/science/article/pii/S221112471931263X?via%3Dihub
 
 ## 📁 Directory Layout
@@ -220,9 +217,6 @@ multiqc .
 | GC content                | Should match expected (~40–50%) | Check for contamination |
 
 ---
-
-
-
 
 
 ### I want to auto-detect adapters and trim your FASTQ files without using Slurm, the simplest one-liner approach is to use fastp — it automatically detects adapter sequences, trims low-quality bases, and generates QC reports.
