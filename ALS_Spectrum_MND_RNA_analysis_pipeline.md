@@ -13,6 +13,7 @@ This work focuses on the Frontal Cortex, and Motor Cortex (Medial) sub-regions.
 This work flowing this paper: 
 1. Postmortem cortex samples identify distinct molecular subtypes of ALS: Retrotransposon activation, oxidative stress, and activated glia. https://www.sciencedirect.com/science/article/pii/S221112471931263X?via%3Dihub
 
+
 ## 📁 Directory Layout
 ## Repository layout
 ```text
@@ -30,7 +31,8 @@ GSE124439_RNAseq/
 │  ├─ motor_cortex_lateral_control.txt
 │  ├─ motor_cortex_medial_case.txt
 │  └─ motor_cortex_medial_control.txt
-├        
+├─ adapters/
+│  └─ TruSeq3-PE.fa                  # adapter file (text; OK to version)
 ├─ scripts/
 │  ├─ download/
 │  │  ├─ prefetch_list.sh            # from list -> .sra cache
@@ -65,11 +67,11 @@ GSE124439_RNAseq/
 │     └─ control/ ...
                    
 ```
+````
+## 📊Cohort & Subregions (GSE124439)
 
-## 📊 Cohort & Subregions (GSE124439)
+**Total samples: 162**
 
-### Total samples: 162
-```
 | Subregion                 | Phenotype                         | Count | Group    |
 |--------------------------|-----------------------------------|------:|----------|
 | Frontal Cortex           | ALS Spectrum MND                  |   65  | Case     |
@@ -79,14 +81,14 @@ GSE124439_RNAseq/
 | Motor Cortex (Medial)    | ALS Spectrum MND                  |   38  | Case     |
 | Motor Cortex (Medial)    | Non-Neurological Control          |    4  | Control  |
 | Motor Cortex (unspecified)| ALS Spectrum MND                 |    5  | Case     |
-```
-#### Totals: Case = 145, Control = 17, Overall = 162.
+
+**Totals:** Case = **145**, Control = **17**, Overall = **162**.
 
 > Notes:  
 > • “ALS Spectrum MND” is treated as **Case**; “Non-Neurological Control” as **Control**.  
 > • The final row (“Motor Cortex – 5 (ALS Spectrum MND)”) is listed as **Motor Cortex (unspecified)** because no lateral/medial label was provided in the summary above.
 
-
+---
 
 ## ⚙️ Environment Setup
 
@@ -102,6 +104,7 @@ module load fastqc/0.11.9
 module load multiqc/1.14
 ````
 
+---
 
 ## 🪄 Step 1 – Configure and Download SRA Data
 
@@ -139,7 +142,6 @@ for sra in SRR*/SRR*.sra; do
   echo "Processing $sra ..."
   fasterq-dump --split-files "$sra" -O fastq/
 done
-
 ```
 
 ---
@@ -183,7 +185,6 @@ done < expected.txt
 echo "Zero-byte FASTQs:"
 find . -maxdepth 1 -name "*.fastq" -size 0 -printf "%f\n"
 ```
-
 🧩 Output Overview
 
 ### Check Type Description
@@ -200,7 +201,6 @@ find . -maxdepth 1 -name "*.fastq" -size 0 -printf "%f\n"
   Detects incomplete or failed downloads.
 
 > Run this check after every `fasterq-dump` batch to confirm integrity before trimming.
-
 
 
 ## 🧪 Step 3 – Quality Control (FastQC + MultiQC)
@@ -223,7 +223,7 @@ multiqc .
 | GC content                | Should match expected (~40–50%) | Check for contamination |
 
 ---
-
+# 11/13/2025 Update
 
 ### I want to auto-detect adapters and trim your FASTQ files without using Slurm, the simplest one-liner approach is to use fastp — it automatically detects adapter sequences, trims low-quality bases, and generates QC reports.
 
@@ -239,21 +239,20 @@ mkdir -p ../trim_fastp ../qc_fastp && for f in *_1.fastq; do r=${f%_1.fastq}; if
 ```
 
 ✅ This will:
-
+```
 Create output folders (if missing)
-
 Skip samples already trimmed
-
 Run fastp only for unprocessed ones
-
+```
 
 
 The command that:
+```
 ✅ auto-detects adapters
 ✅ trims reads using fastp
 ✅ saves trimmed FASTQs in trim_fastp/
 ✅ saves QC reports in qc_fastp/
-
+```
 ```bash
 fastq/
 trim_fastp/
@@ -264,282 +263,230 @@ qc_fastp/
     ├─ SRRXXXXXX_fastp.json
 ```
 
-## Alignment (Mapping) with HISAT2
-Align trimmed paired reads to the hg19 genome using HISAT2 (spliced aligner).
-Keep all uniquely mapped, properly paired reads.
-Remove duplicates (Picard) and mitochondrial/rRNA reads.
+# Update 11/17/2025
+# 🧬 RNA-seq Alignment to T2T-CHM13 Using HISAT2
 
-```bash
-hisat2-build hg19.fa hg19.fa
-```
+*(Build Index → Align Reads → Sorted BAM)*
 
-🧩 The general syntax
-```bash
-hisat2-build [options] <reference_in> <ht2_base>
-```
-<reference_in> → the FASTA file containing your genome (e.g. hg19.fa)
-<ht2_base> → the base name for the output index files that HISAT2 will create
+This guide explains how to:
 
-🧠 So in our case
-```bash
-hisat2-build hg19.fa hg19.fa
-```
-means:
-Input genome FASTA → hg19.fa
-Output index prefix (basename) → also hg19.fa
+1. Download the **T2T CHM13v2.0 genome**
+2. Build the **HISAT2 index**
+3. Align **paired-end, strand-specific RNA-seq reads**
+4. Produce **sorted BAM** output
 
-
-HISAT2 will then create 8 index files named:
-```bash
-hg19.fa.1.ht2
-hg19.fa.2.ht2
-hg19.fa.3.ht2
-hg19.fa.4.ht2
-hg19.fa.5.ht2
-hg19.fa.6.ht2
-hg19.fa.7.ht2
-hg19.fa.8.ht2
-
-```
-
-Here’s our one-liner HISAT2 alignment command (ready to run inside your trim_fastp/ folder):
-
-```bash
-mkdir -p ../hisat2_align && for r1 in *_1.trimmed.fastq; do base=${r1%_1.trimmed.fastq}; echo ">> Aligning $base ..."; hisat2 -p 8 -x /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer/hg19.fa -1 ${base}_1.trimmed.fastq -2 ${base}_2.trimmed.fastq --summary-file ../hisat2_align/${base}_alignment_summary.txt --dta | samtools view -@ 8 -bS -o ../hisat2_align/${base}.bam; done
-```
-sbatch code:
-
-```bash
-#!/bin/bash
-#SBATCH -A yinili               # Your account name
-#SBATCH -p cpu                  # Partition to use (adjust based on your cluster)
-#SBATCH -N 1                     # Number of nodes
-#SBATCH -n 32                    # Number of CPUs (32)
-#SBATCH -t 12:00:00              # Time limit (adjust as needed)
-#SBATCH -J hisat2_align_case     # Job name
-#SBATCH -o hisat2_align_case-%j.out  # Standard output file
-#SBATCH -e hisat2_align_case-%j.err  # Standard error file
-
-# Load necessary modules
-module load hisat2
-module load samtools
-
-# Create directory for output if it doesn't exist
-mkdir -p ../hisat2_align
-
-# Start alignment loop
-for r1 in *_1.trimmed.fastq; do
-  base=${r1%_1.trimmed.fastq}
-  echo ">> Aligning $base ..."
-  hisat2 -p 32 \
-    -x /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer/hg19.fa \
-    -1 ${base}_1.trimmed.fastq \
-    -2 ${base}_2.trimmed.fastq \
-    --summary-file ../hisat2_align/${base}_alignment_summary.txt \
-    --dta | samtools view -@ 32 -bS -o ../hisat2_align/${base}.bam
-done
-```
-Run the Code:
-```bash
-sbatch hisat2_align.sbatch
-```
-
-✅ What it does:
-```
-Creates an output folder ../hisat2_align/
-Aligns each paired FASTQ (_1/_2) to hg19
-Produces:
-SRRxxxxxx.bam (aligned reads)
-SRRxxxxxx_alignment_summary.txt (alignment stats)
-```
-
-
-📄 Each summary file contains lines like:
-
-```bash
-12345678 reads; of these:
-  12000000 (97.2%) were paired; of these:
-    11800000 (98.3%) aligned concordantly 0 times
-    35000 (0.3%) aligned concordantly exactly 1 time
-    30000 (0.25%) aligned concordantly >1 times
-98.8% overall alignment rate
-```
-
-It reports:
-Total reads processed
-% paired and mapped concordantly
-% discordant alignments
-Overall alignment rate
-
-
-
-
-# Sort BAM files
-The aligned .bam files should be sorted by coordinate to ensure they’re ready for downstream analysis.
-
-
-```bash
-#!/bin/bash
-#SBATCH -A yang3099               # Your account name
-#SBATCH -p cpu                  # Partition to use (adjust based on your cluster)
-#SBATCH -N 1                     # Number of nodes
-#SBATCH -n 32                     # Number of CPUs (8 for samtools sort)
-#SBATCH -t 8:00:00               # Time limit (adjust as needed)
-#SBATCH -J sort_index_bam        # Job name
-#SBATCH -o sort_index_bam-%j.out # Standard output file
-#SBATCH -e sort_index_bam-%j.err # Standard error file
-
-# Load necessary modules
-module load samtools
-
-# Create a directory for sorted and indexed BAM files if it doesn't exist
-mkdir -p ../sorted_bam
-
-# Loop through all BAM files in ../hisat2_align/
-for bam in *.bam; do
-  base=$(basename $bam .bam)
-  echo ">> Sorting and indexing $base ..."
-  samtools sort -@ 32 -o ../sorted_bam/${base}.sorted.bam $bam
-  samtools index ../sorted_bam/${base}.sorted.bam
-done
-```
-```
-SBATCH -A yinili: Your account for job allocation.
-SBATCH -p cpu: Partition to use (adjust if necessary).
-SBATCH -N 1: 1 node for the job.
-SBATCH -n 8: 8 CPUs for parallel processing (adjust based on your available cores and SAMtools usage).
-SBATCH -t 6:00:00: Time limit (adjust as per the expected job time).
-SBATCH -J sort_index_bam: Job name for easy identification.
-SBATCH -o sort_index_bam-%j.out: Standard output file with the job ID.
-SBATCH -e sort_index_bam-%j.err: Standard error file with the job ID.
-```
-
-Result: Sorted BAM files will be saved in ../sorted_bam/.
-Indexed BAM files will also be available with .bai extensions in the same directory.
-
-
-# .BAM Processing Pipeline
-
-This script provides a batch processing pipeline for RNA-Seq BAM files. It covers the following steps:
-
-1. **Add Read Groups** to BAM files using Picard
-2. **Mark Duplicates** using Picard
-3. **Index BAM files** using Samtools
-4. **Remove mitochondrial and rRNA reads**
-
-## Requirements
-
-- **Picard**: For adding read groups and marking duplicates
-- **Samtools**: For BAM file indexing and filtering
-- **SLURM**: For batch job submission
-
-## Directory Structure
-
-The script expects the following directory structure:
-```
-├── process_bam.sbatch # SLURM job script
-├── sorted_bam/ # Input folder containing sorted BAM files
-│ ├── sample1.sorted.bam
-│ ├── sample2.sorted.bam
-│ └── ... # More sorted BAM files
-├── read_group_bam/ # Output folder for read group added BAM files
-│ ├── sample1.rg.bam
-│ ├── sample2.rg.bam
-│ └── ... # More read group added BAM files
-├── marked_bam/ # Output folder for duplicate marked BAM files
-│ ├── sample1.marked.bam
-│ ├── sample2.marked.bam
-│ └── ... # More marked BAM files
-└── filtered_bam/ # Output folder for filtered BAM files
-├── sample1.filtered.bam
-├── sample2.filtered.bam
-└── ... # More filtered BAM files
-```
-
-
-## `process_bam.sbatch` Script
-
-This script processes each sorted BAM file in the **`sorted_bam/`** directory by adding read groups, marking duplicates, indexing, and filtering mitochondrial and rRNA reads. Below is the full script:
-
-```bash
-#!/bin/bash
-#SBATCH -A yinili               # Your account name
-#SBATCH -p cpu                  # Partition to use (adjust based on your cluster)
-#SBATCH -N 1                     # Number of nodes
-#SBATCH -n 8                     # Number of CPUs (adjust based on your system)
-#SBATCH -t 6:00:00               # Time limit (adjust as needed)
-#SBATCH -J process_bam           # Job name
-#SBATCH -o process_bam-%j.out    # Standard output file
-#SBATCH -e process_bam-%j.err    # Standard error file
-
-# Load necessary modules
-module load samtools
-module load picard
-
-# Create directories for output files
-mkdir -p ../read_group_bam ../marked_bam ../filtered_bam
-
-# Loop through all sorted BAM files in the current directory
-for bam in *.sorted.bam; do
-  base=$(basename $bam .sorted.bam)
-  
-  # Add read groups using Picard
-  echo ">> Adding read groups to $base ..."
-  picard AddOrReplaceReadGroups \
-    I=$bam \
-    O=../read_group_bam/${base}.rg.bam \
-    RGID=$base \
-    RGLB=lib1 \
-    RGPL=illumina \
-    RGPU=unit1 \
-    RGSM=$base
-
-  # Mark duplicates using Picard
-  echo ">> Marking duplicates for $base ..."
-  picard MarkDuplicates \
-    I=../read_group_bam/${base}.rg.bam \
-    O=../marked_bam/${base}.marked.bam \
-    M=../marked_bam/${base}.marked_metrics.txt \
-    REMOVE_DUPLICATES=true
-
-  # Index the BAM file using Samtools
-  echo ">> Indexing BAM file for $base ..."
-  samtools index ../marked_bam/${base}.marked.bam
-
-  # Remove mitochondrial (chrM/MT) and rRNA reads
-  echo ">> Removing mitochondrial and rRNA reads from $base ..."
-  samtools view -h ../marked_bam/${base}.marked.bam | \
-    grep -v "chrM" | grep -v "MT" | \
-    samtools view -bS -o ../filtered_bam/${base}.filtered.bam
-  
-  # Index the filtered BAM file
-  samtools index ../filtered_bam/${base}.filtered.bam
-
-  echo ">> Finished processing $base."
-done
-```
-
-
-### Script Explanation
-
-1.  **Add Read Groups using Picard**
-    The `AddOrReplaceReadGroups` step adds read group information (important for RNA-seq and other analyses that require sample identification). The script includes details like library, platform, and sample name.
-
-2.  **Mark Duplicates using Picard**
-    The `MarkDuplicates` step removes PCR duplicates, which is important for avoiding bias in RNA-seq or sequencing data.
-
-3.  **Index the BAM files using Samtools**
-    The `index` command from Samtools is used to index the BAM files, which allows for faster access and querying.
-
-4.  **Remove mitochondrial (chrM/MT) and rRNA reads**
-    This step filters out mitochondrial and rRNA reads from the BAM files, which are often unnecessary for certain analyses. The `grep -v "chrM" | grep -v "MT"` removes mitochondrial reads, and additional filters can be added if needed.
 
 ---
 
-### Job Submission
-
-To submit this script to the SLURM scheduler, save the script as `process_bam.sbatch` and run:
+## 📥 1. Download the T2T Genome
 
 ```bash
-sbatch process_bam.sbatch
+wget [https://s3.amazonaws.com/nanopore-human-wgs/chm13v2.0.fa.gz](https://s3.amazonaws.com/nanopore-human-wgs/chm13v2.0.fa.gz)
+gunzip chm13v2.0.fa.gz
+```
+
+This produces:
+
+```
+chm13v2.0.fa
+```
+
+---
+
+## 🧱 2. Build the HISAT2 Index
+
+```bash
+hisat2-build -p 16 chm13v2.0.fa chm13_index
+```
+
+This generates eight index files:
+
+```
+chm13_index.1.ht2
+chm13_index.2.ht2
+chm13_index.3.ht2
+chm13_index.4.ht2
+chm13_index.5.ht2
+chm13_index.6.ht2
+chm13_index.7.ht2
+chm13_index.8.ht2
+```
+
+---
+
+## 🎯 3. Align Paired FASTQ Files (Stranded RNA-seq)
+
+Move into trimmed FASTQ directory (e.g., `trim_fastp/`):
+
+```bash
+cd trim_fastp/
+```
+
+Run the HISAT2 + Samtools pipeline:
+
+```bash
+mkdir -p ../hisat2_t2t_bam ../hisat2_t2_tlogs && \
+for f in *_1.trimmed.fastq; do
+  r=${f%_1.trimmed.fastq}
+  echo "Processing: ${r}"
+  
+  # HISAT2 alignment with paper parameters
+  hisat2 -p 16 \
+    --rna-strandness RF \
+    --dta \
+    --summary-file ../hisat2_t2tlogs/${r}.hisat2.summary.txt \
+    -x /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/chm13v2.0 \
+    -1 ${r}_1.trimmed.fastq \
+    -2 ${r}_2.trimmed.fastq \
+    2>> ../hisat2_t2tlogs/${r}.hisat2.stderr.log \
+  | samtools sort -@ 8 -o ../hisat2_t2t_bam/${r}.sorted.bam
+  
+  samtools index -@ 8 ../hisat2_t2t_bam/${r}.sorted.bam
+  
+  # Separate FORWARD strand (flags 99 OR 147)
+  samtools view -@ 4 -b -f 99 ../hisat2_t2t_bam/${r}.sorted.bam > ../hisat2_t2t_bam/${r}_f99.bam
+  samtools view -@ 4 -b -f 147 ../hisat2_t2t_bam/${r}.sorted.bam > ../hisat2_t2t_bam/${r}_f147.bam
+  samtools merge -@ 4 -f ../hisat2_t2t_bam/${r}_forward_strand.bam \
+    ../hisat2_t2t_bam/${r}_f99.bam \
+    ../hisat2_t2t_bam/${r}_f147.bam
+  rm ../hisat2_t2t_bam/${r}_f99.bam ../hisat2_t2t_bam/${r}_f147.bam
+  
+  # Separate REVERSE strand (flags 83 OR 163)
+  samtools view -@ 4 -b -f 83 ../hisat2_t2t_bam/${r}.sorted.bam > ../hisat2_t2t_bam/${r}_f83.bam
+  samtools view -@ 4 -b -f 163 ../hisat2_t2t_bam/${r}.sorted.bam > ../hisat2_t2t_bam/${r}_f163.bam
+  samtools merge -@ 4 -f ../hisat2_t2t_bam/${r}_reverse_strand.bam \
+    ../hisat2_t2t_bam/${r}_f83.bam \
+    ../hisat2_t2t_bam/${r}_f163.bam
+  rm ../hisat2_t2t_bam/${r}_f83.bam ../hisat2_t2t_bam/${r}_f163.bam
+  
+  # Index strand-specific BAMs
+  samtools index -@ 4 ../hisat2_t2t_bam/${r}_forward_strand.bam
+  samtools index -@ 4 ../hisat2_t2t_bam/${r}_reverse_strand.bam
+  
+  # Quick verification
+  echo "  Total: $(samtools view -c ../hisat2_t2t_bam/${r}.sorted.bam)"
+  echo "  Forward: $(samtools view -c ../hisat2_t2t_bam/${r}_forward_strand.bam)"
+  echo "  Reverse: $(samtools view -c ../hisat2_t2t_bam/${r}_reverse_strand.bam)"
+done
+
+```
+```text
+Output Files
+
+Sorted BAM files: ../hisat2_t2t_bam/ (e.g., SRR8375298.sorted.bam)
+
+Strand-specific BAM files:
+
+Forward strand: SRR8375298_forward_strand.bam
+
+Reverse strand: SRR8375298_reverse_strand.bam
+
+Summary files: ../hisat2_t2tlogs/ (e.g., SRR8375298.hisat2.summary.txt)
+
+```
+
+
+
+### Duplicate Removal Script for Sorted BAMs
+```
+module load picard/2.27.5  # Load Picard module
+
+# Loop through all sorted BAM files
+for f in ../hisat2_t2t_bam/*.sorted.bam; do
+  r=$(basename ${f%.sorted.bam})  # Extract sample name
+
+  echo "Marking duplicates for $r"
+
+  # Mark duplicates and remove them
+  picard MarkDuplicates \
+    I=$f \
+    O=../hisat2_t2t_bam/${r}.dedup.bam \
+    M=../hisat2_t2t_bam/${r}.dedup.metrics.txt \
+    REMOVE_DUPLICATES=true \
+    CREATE_INDEX=true \
+    VALIDATION_STRINGENCY=SILENT
+
+  # Optional: if you want to keep the duplicates marked but not removed
+  # REMOVE_DUPLICATES=false
+done
+```
+#### HISAT2 Duplicate Removal and Indexing
+This section explains the parameters used for removing duplicates and creating an index in a BAM file after HISAT2 alignment.
+
+- **I**=`$f`: **Input Sorted BAM File**  
+  The input BAM file, which is sorted, that contains the aligned reads.
+
+- **O**=`../hisat2_t2t_bam/${r}.dedup.bam`: **Output BAM File (with duplicates removed)**  
+  The output file where the duplicates will be removed and the results saved as a new BAM file.
+
+- **M**=`../hisat2_t2t_bam/${r}.dedup.metrics.txt`: **Duplicate Removal Metrics File**  
+  A file that logs the metrics related to the duplicate removal process, including how many duplicates were removed.
+
+- **REMOVE_DUPLICATES=true**: **Duplicate Removal Option**  
+  When set to `true`, this option ensures that duplicate reads are removed from the BAM file.
+
+- **CREATE_INDEX=true**: **Create BAM Index**  
+  This option creates an index for the deduplicated BAM file, allowing for efficient retrieval of alignments.
+
+- **VALIDATION_STRINGENCY=SILENT**: **Validation Stringency**  
+  This option silences warnings related to invalid reads, allowing the process to continue without interruptions.
+
+
+
+  #### SBATCH Script for Marking (Not Removing) Duplicates
+
+```
+#!/bin/bash
+#SBATCH -A yang3099                  # Correct account for Gautschi cluster
+#SBATCH -p cpu                        # CPU partition
+#SBATCH -N 1                           # Use 1 node
+#SBATCH -n 16                          # Number of CPU cores (16 for Picard)
+#SBATCH -t 12:00:00                    # Time limit for the job (adjust if necessary)
+#SBATCH -J picard_mark_duplicates      # Job name
+#SBATCH -o picard_mark_duplicates-%j.out  # Output log
+#SBATCH -e picard_mark_duplicates-%j.err  # Error log
+
+# Load necessary modules
+module --force purge
+module load biocontainers
+module load picard
+
+# Change to the directory where your sorted BAM files are located
+cd "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/motor_cortex_\(lateral\)/case/hisat2_t2t_bam"
+
+# Create directories for output if not already created
+mkdir -p ../qc_markdup
+
+# Loop through all sorted BAM files
+for f in ../hisat2_t2t_bam/*.sorted.bam; do
+  r=$(basename ${f%.sorted.bam})  # Extract sample name from BAM file
+
+  echo "Marking duplicates for $r"
+
+  # Mark duplicates but don't remove them
+  picard MarkDuplicates \
+    I=$f \
+    O=../hisat2_t2t_bam/${r}.dedup.bam \
+    M=../qc_markdup/${r}.dedup.metrics.txt \
+    REMOVE_DUPLICATES=false \  # Keep the duplicates marked but not removed
+    CREATE_INDEX=true \
+    VALIDATION_STRINGENCY=SILENT
+
+  # Optional: If you want to keep the duplicates marked but not removed, we already set REMOVE_DUPLICATES=false
+done
+
+echo "All duplicates marked but not removed."
+
+```
+
+Correct one-line command for this GTF
+```
+awk '!/^#/ && $0 ~ /rRNA/ {OFS="\t"; print $1, $4-1, $5, $9}' GCF_009914755.1_T2T-CHM13v2.0_genomic.gtf > chm13_rRNA.bed
+```
+🔍 check it worked
+```
+wc -l chm13_rRNA.bed
+head chm13_rRNA.bed
+```
+
 
