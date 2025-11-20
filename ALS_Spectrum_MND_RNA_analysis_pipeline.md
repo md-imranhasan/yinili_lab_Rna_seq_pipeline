@@ -488,7 +488,9 @@ awk '!/^#/ && $0 ~ /rRNA/ {OFS="\t"; print $1, $4-1, $5, $9}' GCF_009914755.1_T2
 wc -l chm13_rRNA.bed
 head chm13_rRNA.bed
 ```
-
+```
+bam="SRR8375275.dedup.bam"; bed="/depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/chm13_rRNA.chr.bed"; total=$(samtools view -@4 -c -F2308 "$bam"); mito=$(samtools view -@4 -c -F2308 "$bam" chrM); rrna=$(samtools view -@4 -c -F2308 -L "$bed" "$bam"); mito_pct=$(awk -v m=$mito -v t=$total 'BEGIN{printf "%.4f",(m/t)*100}'); rrna_pct=$(awk -v r=$rrna -v t=$total 'BEGIN{printf "%.4f",(r/t)*100}'); echo -e "Total:\t$total\nMito:\t$mito\t(${mito_pct}%)\nrRNA:\t$rrna\t(${rrna_pct}%)"
+```
 
 ```bash
 cd /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T
