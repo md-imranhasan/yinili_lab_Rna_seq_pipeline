@@ -490,3 +490,36 @@ head chm13_rRNA.bed
 ```
 
 
+```bash
+cd /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T
+
+awk 'BEGIN{OFS="\t"}
+{
+  if ($1=="NC_060925.1")      $1="chr1";
+  else if ($1=="NC_060926.1") $1="chr2";
+  else if ($1=="NC_060927.1") $1="chr3";
+  else if ($1=="NC_060928.1") $1="chr4";
+  else if ($1=="NC_060929.1") $1="chr5";
+  else if ($1=="NC_060930.1") $1="chr6";
+  else if ($1=="NC_060931.1") $1="chr7";
+  else if ($1=="NC_060932.1") $1="chr8";
+  else if ($1=="NC_060933.1") $1="chr9";
+  else if ($1=="NC_060934.1") $1="chr10";
+  else if ($1=="NC_060935.1") $1="chr11";
+  else if ($1=="NC_060936.1") $1="chr12";
+  else if ($1=="NC_060937.1") $1="chr13";
+  else if ($1=="NC_060938.1") $1="chr14";
+  else if ($1=="NC_060939.1") $1="chr15";
+  else if ($1=="NC_060940.1") $1="chr16";
+  else if ($1=="NC_060941.1") $1="chr17";
+  else if ($1=="NC_060942.1") $1="chr18";
+  else if ($1=="NC_060943.1") $1="chr19";
+  else if ($1=="NC_060944.1") $1="chr20";
+  else if ($1=="NC_060945.1") $1="chr21";
+  else if ($1=="NC_060946.1") $1="chr22";
+  else if ($1=="NC_060947.1") $1="chrX";
+  else if ($1=="NC_060948.1") $1="chrY";
+  else if ($1=="NC_012920.1") $1="chrM";
+  print
+}' chm13_rRNA.bed > chm13_rRNA.chr.bed
+```
