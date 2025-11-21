@@ -525,3 +525,161 @@ awk 'BEGIN{OFS="\t"}
   print
 }' chm13_rRNA.bed > chm13_rRNA.chr.bed
 ```
+
+
+
+
+
+
+
+
+
+
+```text
+
+#!/bin/bash
+#SBATCH -A yang3099               # Your account name
+#SBATCH -p cpu
+#SBATCH -N 1
+#SBATCH -n 16
+#SBATCH -t 12:00:00
+#SBATCH -J cleanup_correct
+#SBATCH -o cleanup_correct-%j.out
+#SBATCH -e cleanup_correct-%j.err
+
+
+
+module --force purge
+module load biocontainers
+module load samtools
+module load picard
+
+THREADS=16
+
+# Your working directory with sorted BAMs
+cd "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/control/hisat2_t2t_bam"
+
+mkdir -p ../qc_markdup
+
+# ✅ FIX THIS TO REAL PATH
+RRNA_BED="/depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/chm13_rRNA.chr.bed"
+MT_CHR="chrM"   # or "MT" if that’s what idxstats shows
+
+   # Summary file for all samples
+SUMMARY="../qc_markdup/cleanup_summary.tsv"
+echo -e "sample\tsorted_reads\tdedup_reads\tduplication_pct\tmt_reads\tmt_pct\trrna_reads\trrna_pct\tclean_reads" > "$SUMMARY"
+
+################################################################################
+# MAIN LOOP
+################################################################################
+
+for in_bam in *.sorted.bam; do
+    sample=${in_bam%.sorted.bam}
+    echo "=== Sample: ${sample} ==="
+
+    dedup="${sample}.dedup.bam"
+    metrics="../qc_markdup/${sample}.dedup.metrics.txt"
+    noMT="${sample}.dedup.noMT.bam"
+    clean="${sample}.clean.bam"
+    rRNA_only="${sample}.rRNA_only.bam"
+
+    ###########################################################################
+    # 1) REMOVE DUPLICATES (MarkDuplicates, NO INDEXING HERE)
+    ###########################################################################
+    if [[ -f "$dedup" ]]; then
+        echo ">> Dedup exists, skipping MarkDuplicates: $dedup"
+    else
+        echo ">> Running MarkDuplicates on $in_bam ..."
+        picard MarkDuplicates \
+            -I "${in_bam}" \
+            -O "${dedup}" \
+            -M "${metrics}" \
+            --DUPLICATE_SCORING_STRATEGY SUM_OF_BASE_QUALITIES \
+            --REMOVE_DUPLICATES true \
+            --VALIDATION_STRINGENCY SILENT
+    fi
+
+    ###########################################################################
+    # 2) REMOVE MITOCHONDRIAL READS (MT / chrM) FROM DEDUP BAM
+    ###########################################################################
+    if [[ -f "$noMT" ]]; then
+        echo ">> noMT exists, skipping MT removal: $noMT"
+    else
+        echo ">> Removing mitochondrial reads (${MT_CHR} / MT) from $dedup ..."
+        samtools view -@ "${THREADS}" -h "${dedup}" \
+          | awk -v mt="${MT_CHR}" 'BEGIN{OFS="\t"}
+                /^@/ {print; next}
+                ($3!=mt && $3!="MT") {print}' \
+          | samtools view -@ "${THREADS}" -b -o "${noMT}" -
+    fi
+
+    ###########################################################################
+    # 3) REMOVE rRNA READS USING BED
+    ###########################################################################
+    if [[ -f "$clean" && -f "$rRNA_only" ]]; then
+        echo ">> Clean and rRNA-only BAMs exist, skipping rRNA removal."
+    else
+        echo ">> Removing rRNA using BED: ${RRNA_BED}"
+        # Reads overlapping RRNA_BED → rRNA_only
+        # Reads NOT overlapping (non-rRNA) → clean
+        samtools view -@ "${THREADS}" -b -L "${RRNA_BED}" -U "${clean}" "${noMT}" > "${rRNA_only}"
+    fi
+
+    ###########################################################################
+    # 4) INDEX ONLY FINAL CLEAN BAM
+    ###########################################################################
+    if [[ ! -f "${clean}.bai" ]]; then
+        echo ">> Indexing final clean BAM: ${clean}"
+        samtools index -@ "${THREADS}" "${clean}"
+    fi
+
+    ###########################################################################
+    # 5) QC METRICS — READ COUNTS & PERCENTAGES
+    ###########################################################################
+    sorted_reads=$(samtools view -@ "${THREADS}" -c "${in_bam}")
+    dedup_reads=$(samtools view -@ "${THREADS}" -c "${dedup}")
+    noMT_reads=$(samtools view -@ "${THREADS}" -c "${noMT}")
+    rrna_reads=$(samtools view -@ "${THREADS}" -c "${rRNA_only}")
+    clean_reads=$(samtools view -@ "${THREADS}" -c "${clean}")
+
+    # MT reads removed = dedup - noMT
+    mt_reads=$((dedup_reads - noMT_reads))
+
+    # Percentages (protect against division by zero)
+    mt_pct=$(awk -v a="$mt_reads" -v b="$dedup_reads" 'BEGIN{if(b==0) print 0; else printf "%.4f", (a/b)*100}')
+    rrna_pct=$(awk -v a="$rrna_reads" -v b="$noMT_reads" 'BEGIN{if(b==0) print 0; else printf "%.4f", (a/b)*100}')
+
+    ###########################################################################
+    # 6) DUPLICATION % FROM PICARD METRICS (PERCENT_DUPLICATION COLUMN)
+    ###########################################################################
+    dup_pct=$(awk '
+      BEGIN{FS="\t"; col=-1}
+      $1=="LIBRARY"{
+          for(i=1;i<=NF;i++){
+              if($i=="PERCENT_DUPLICATION"){ col=i }
+          }
+      }
+      $1!~/^#|LIBRARY/ && col>0 {
+          print $col; exit
+      }
+    ' "${metrics}")
+
+    ###########################################################################
+    # 7) PRINT QC + APPEND SUMMARY
+    ###########################################################################
+    echo "sorted_reads:  ${sorted_reads}"
+    echo "dedup_reads:   ${dedup_reads}"
+    echo "duplication %: ${dup_pct}"
+    echo "mt_reads:      ${mt_reads}  (${mt_pct}%)"
+    echo "rRNA_reads:    ${rrna_reads} (${rrna_pct}%)"
+    echo "clean_reads:   ${clean_reads}"
+    echo
+
+    echo -e "${sample}\t${sorted_reads}\t${dedup_reads}\t${dup_pct}\t${mt_reads}\t${mt_pct}\t${rrna_reads}\t${rrna_pct}\t${clean_reads}" >> "$SUMMARY"
+
+done
+
+echo "Cleanup complete."
+echo "Summary table saved to: ${SUMMARY}"
+
+```
