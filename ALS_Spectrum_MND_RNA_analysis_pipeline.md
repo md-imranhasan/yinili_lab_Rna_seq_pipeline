@@ -692,6 +692,29 @@ echo "Summary table saved to: ${SUMMARY}"
 #### Prepare a RepeatMasker annotation for counting (SAF for featureCounts)
 RepeatMasker is a tool that identifies repetitive DNA elements in a genome. The RepeatMasker annotation is a list of all repetitive elements that have been annotated and categorized in the genome.
 
+Files we have:
+
+Gene GTF (GCF_009914755.1_T2T-CHM13v2.0_genomic.gtf): This file contains the gene-level annotation (genes, transcripts, exons, etc.) for the T2T CHM13 v2.0 genome.
+
+RepeatMasker GTF (T2T_CHM13v2_hs1_repeatmasker.gtf): This file contains the RepeatMasker annotations (TEs like LINEs, LTRs, Simple repeats, etc.).
+
+### 1️⃣ Combine Gene and Repeat Annotations (GTF)
+
+
+```bash
+cd /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/
+
+# Combine both gene and repeat GTFs into one file
+cat GCF_009914755.1_T2T-CHM13v2.0_genomic.gtf T2T_CHM13v2_hs1_repeatmasker.gtf > T2T_CHM13v2_combined.gtf
+```
+
+Important step: Sort the combined GTF
+```bash
+sort -k1,1 -k4,4n T2T_CHM13v2_combined.gtf > T2T_CHM13v2_combined_sorted.gtf
+```
+
+
+
 RepeatMasker GTF or SAF annotation contains:
 ```text
 Element names (e.g., L1MC3#LINE/L1, AluY#SINE/Alu)
