@@ -683,3 +683,157 @@ echo "Cleanup complete."
 echo "Summary table saved to: ${SUMMARY}"
 
 ```
+
+
+
+
+# Update 11/24/2025 
+## Quantify & Annotation repeat RNAs with RepeatMasker (T2T)
+#### Prepare a RepeatMasker annotation for counting (SAF for featureCounts)
+RepeatMasker is a tool that identifies repetitive DNA elements in a genome. The RepeatMasker annotation is a list of all repetitive elements that have been annotated and categorized in the genome.
+
+RepeatMasker GTF or SAF annotation contains:
+```text
+Element names (e.g., L1MC3#LINE/L1, AluY#SINE/Alu)
+
+Chromosome locations (e.g., chr1, chr22)
+
+Start and end positions of the repetitive elements
+
+Strand information (whether the element is on the + or - strand)
+```
+
+```bash
+cd /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/Repeatmasker
+
+awk '
+BEGIN {
+    FS = "\t";
+    OFS = "\t";
+    print "GeneID","Chr","Start","End","Strand";
+}
+# Skip comments
+/^#/ { next }
+
+{
+    chr=$1; start=$4; end=$5; strand=$7;
+
+    # attribute column
+    attr=$9;
+
+    # Extract gene_id from the attribute field
+    match(attr, /gene_id "([^"]+)"/, arr);
+    gene_id = arr[1];
+
+    if (gene_id == "" || gene_id == NULL) {
+        gene_id = "TE_"NR;
+    }
+
+    # Print SAF
+    print gene_id, chr, start, end, strand;
+}
+' T2T_CHM13v2_hs1_repeatmasker.gtf > T2T_CHM13v2_repeatmasker.saf
+
+```
+
+
+#### (Optional but recommended) Create FAMILY-level SAF
+
+```bash
+awk '
+BEGIN {
+    FS="\t"; OFS="\t";
+    print "GeneID","Chr","Start","End","Strand";
+}
+!/^#/ {
+    chr=$1; start=$4; end=$5; strand=$7;
+
+    # Extract gene_id
+    match($9, /gene_id "([^"]+)"/, arr);
+    full=arr[1];     # e.g., L1MC3#LINE/L1
+
+    split(full, a, "#");
+    fam=a[2];        # e.g., LINE/L1
+
+    if (fam == "" || fam == NULL) fam = "UNKNOWN";
+
+    print fam, chr, start, end, strand;
+}
+' T2T_CHM13v2_hs1_repeatmasker.gtf > T2T_CHM13v2_repeatmasker_family.saf
+
+```
+
+
+
+
+## featureCounts on RepeatsRNA
+Per Family TE count (recommended)
+
+cd /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/case/hisat2_t2t_bam
+```bash
+featureCounts -T 16 -p -B -C -s 2 \
+  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/Repeatmasker/T2T_CHM13v2_repeatmasker.saf \
+  -F SAF \
+  -o TE_element_counts_with_BC.txt \
+  *.clean.bam
+
+```
+
+### For Unique Reads (Exclude Multi-mapped Reads) - Using .SAF
+```bash
+featureCounts -T 16 -p -B -C -s 2 \
+  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/Repeatmasker/T2T_CHM13v2_repeatmasker.saf \
+  -F SAF \
+  -o TE_unique_counts.txt \
+  *.clean.bam
+```
+
+### For Fractional Multi-mapping Reads
+
+```bash
+featureCounts -T 16 -p -B -C -s 2 \
+  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/Repeatmasker/T2T_CHM13v2_repeatmasker.saf \
+  -F SAF \
+  -M --fraction \
+  -o TE_fractional_counts.txt \
+  *.clean.bam
+```
+
+#### For Unique Reads (Exclude Multi-mapped Reads) - Using .gtf
+```text
+featureCounts -T 16 -p -B -C -s 2 \
+  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Repeatmasker/T2T_CHM13v2_hs1_repeatmasker.gtf \
+  -F GTF -t exon -g gene_id \
+  -o TE_fractional_counts_gft_unique.txt \
+  *.clean.bam
+```
+
+### For Fractional Multi-mapping Reads
+```text
+featureCounts -T 16 -p -B -C -s 2 \
+  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Repeatmasker/T2T_CHM13v2_hs1_repeatmasker.gtf \
+  -F GTF -t exon -g gene_id \
+  -M --fraction 
+  -o TE_fractional_counts_gft_unique.txt \
+  *.clean.bam
+```
+
+
+Explanation:
+```text
+-T 16 – 16 threads
+
+-p – paired-end
+
+-s 2 – reverse-stranded, matches your --rna-strandness RF
+
+-F SAF – annotation is in SAF format
+
+*.clean.bam – only use your final cleaned BAMs
+
+If we want - we can use : -M -O --fraction – count reads that map to multiple features and fractionally assign them
+```
+Output:
+
+TE_family_counts.txt → matrix of TE family counts (rows = family, cols = samples)
+
