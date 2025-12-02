@@ -860,3 +860,245 @@ Output:
 
 TE_family_counts.txt → matrix of TE family counts (rows = family, cols = samples)
 
+
+
+
+
+Filter the gene count file
+```bash
+# 1) Load the featureCounts output (genes)
+gene_counts <- read.delim(
+  "D:/Yini Li Lab/Frontal_Cortex/T2T_CHM13v2_Liftoff_gene_counts_all.txt",
+  comment.char = "#",
+  check.names = FALSE
+)
+
+# Quick sanity check
+head(gene_counts[, 1:8])
+```
+
+We see columns like:
+
+Geneid, Chr, Start, End, Strand, Length
+
+then one column per sample: SRRxxxx.clean.bam
+
+
+Step 2 – Pull out the count matrix (only sample columns)
+```bash
+# 2) Identify sample columns (end with .clean.bam)
+sample_cols <- grep("\\.clean.bam$", colnames(gene_counts), value = TRUE)
+
+# 3) Build the numeric matrix of counts
+gene_mat <- as.matrix(gene_counts[, sample_cols])
+storage.mode(gene_mat) <- "integer"
+```
+
+Step 3 – Define the filter: keep genes with total counts ≥ 10
+```bash
+# 4) Compute total counts per gene across all samples
+gene_totals <- rowSums(gene_mat)
+
+# 5) Find genes to keep: total count >= 10
+keep_genes <- gene_totals >= 10
+
+# How many are kept vs removed?
+table(keep_genes)
+```
+
+Step 4 – Apply the filter and save a new filtered file
+```bash
+# 6) Subset the original data.frame to only kept genes
+gene_counts_filtered <- gene_counts[keep_genes, ]
+
+# 7) Write to a new file
+write.table(
+  gene_counts_filtered,
+  file = "D:/Yini Li Lab/Frontal_Cortex/T2T_CHM13v2_Liftoff_gene_counts_all_filtered10.txt",
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE
+)
+```
+
+
+
+
+
+
+
+### 1. Check for Quality and Completeness of the Count Files
+Before proceeding with any further analysis, ensure the count files (e.g., `TE_counts_filtered_10.txt`, `gene_expression_counts_filtered_10.txt`) have been successfully generated.
+
+- Check for **missing values** or **empty columns** in the count files.
+- Verify that each sample has **non-zero counts** across different features (genes/repeats).
+
+```bash
+# Example of a quick check of the first few lines of the output
+head T2T_CHM13v2_gene_expression_counts_filtered_10.txt
+```
+
+2. Plot Histograms of Raw Counts
+
+Create histograms to visualize the distribution of raw counts across different samples and features.
+
+This will help assess bias in the data and understand the count distribution
+
+```bash
+library(ggplot2)
+
+# Read the gene count data
+counts_data <- read.table("T2T_CHM13v2_gene_expression_counts_filtered_10.txt", header=TRUE, row.names=1)
+
+# Plot histogram of counts
+ggplot(as.data.frame(counts_data), aes(x=log2(counts_data + 1))) + 
+  geom_histogram(binwidth=0.1) + 
+  labs(title="Gene Expression Counts Distribution", x="Log2 Transformed Counts", y="Frequency")
+```
+
+
+Data Normalization
+
+Normalization ensures that the counts across different samples are comparable and removes unwanted biases (such as sequencing depth).
+
+a. For Gene Expression
+
+Use DESeq2 for normalizing and analyzing gene expression data.
+
+1. Install DESeq2 (if not installed):
+```  
+install.packages("DESeq2")
+```
+
+2. Prepare Data:
+
+Import the count data generated from featureCounts.
+
+Construct a DESeqDataSet object.
+```
+library(DESeq2)
+
+# Load count data for genes (rows are genes, columns are samples)
+counts_data <- read.table("T2T_CHM13v2_gene_expression_counts_filtered_10.txt", header=TRUE, row.names=1)
+
+# Create DESeqDataSet from count data
+dds <- DESeqDataSetFromMatrix(countData = counts_data, 
+                              colData = coldata, # This should be a data.frame with sample information
+                              design = ~ condition)  # condition is the variable you're interested in
+```
+
+3. Normalization:
+
+DESeq2 will perform normalization internally when running the DE analysis.
+
+```
+dds <- DESeq(dds)
+normalized_counts <- counts(dds, normalized=TRUE)
+```
+
+b. For Repeat (TE) Counts
+Repeat element data normalization can also be done using DESeq2. The process is similar to the gene expression pipeline.
+```bash
+# For TE count data
+TE_counts <- read.table("T2T_CHM13v2_repeatmasker_TE_counts_filtered_10.txt", header=TRUE, row.names=1)
+
+# DESeq2 normalization for TE counts
+dds_TE <- DESeqDataSetFromMatrix(countData = TE_counts, 
+                                  colData = coldata, 
+                                  design = ~ condition)
+dds_TE <- DESeq(dds_TE)
+normalized_TE_counts <- counts(dds_TE, normalized=TRUE)
+
+```
+
+6️⃣ Differential Expression Analysis
+
+Once the counts are normalized, you can perform differential expression analysis to compare gene expression and TE activity between different conditions (e.g., ALS vs. control).
+
+Gene Expression Differential Analysis with DESeq2:
+```bash
+# DESeq2 analysis for differential gene expression
+res_gene <- results(dds)
+
+# Summarize results
+summary(res_gene)
+
+# Plot results (MA plot)
+plotMA(res_gene, main="DESeq2: Differential Gene Expression")
+
+# Export results
+write.csv(as.data.frame(res_gene), "DEG_results.csv")
+```
+
+Repeat (TE) Differential Analysis with DESeq2
+```
+# Differential analysis for TE activity
+res_TE <- results(dds_TE)
+
+# Summarize results
+summary(res_TE)
+
+# Plot results (MA plot)
+plotMA(res_TE, main="DESeq2: Differential TE Expression")
+
+# Export results
+write.csv(as.data.frame(res_TE), "DE_TE_results.csv")
+```
+
+
+
+
+# 1️⃣ Differential TE Expression Results (DESeq2)
+After running DESeq2 for your RepeatMasker annotations (such as in the previous example for T2T_CHM13v2_hs1_repeatmasker.gtf), you'll have a result table that includes log2 fold changes and adjusted p-values for each repeat element.
+
+Now you have the results stored in res_TE.
+
+```bash
+# Example of loading TE results into DESeq2
+res_TE <- results(dds_TE)
+```
+
+2️⃣ Filter TEs Based on Significance
+
+ Filter the results to identify significantly differentially expressed TEs based on our chosen thresholds (e.g., padj < 0.05 and |log2FoldChange| > 1).
+```bash
+ # Filter significant TEs based on padj and log2FoldChange
+significant_TE <- res_TE[res_TE$padj < 0.05 & abs(res_TE$log2FoldChange) > 1, ]
+
+# View the significant TEs
+head(significant_TE)
+```
+
+3️⃣ Identifying Specific Transposable Elements
+We can extract the gene_id or transcript_id to identify the specific type of repeat element (e.g., LINEs, SINEs, ERVs, etc.).
+
+The RepeatMasker GTF file typically contains repeat annotations in the gene_id or transcript_id fields (e.g., L1MC3#LINE/L1, SVA, LTR, ERV, etc.). We can filter or group our results by these annotations.
+```bash
+# Extracting gene_id (repeat element family)
+significant_TE$gene_id <- rownames(significant_TE)
+
+# Filter specific repeat families like LINE, SINE, LTR
+LINEs <- significant_TE[grepl("LINE", significant_TE$gene_id), ]
+SINEs <- significant_TE[grepl("SINE", significant_TE$gene_id), ]
+ERVs <- significant_TE[grepl("ERV", significant_TE$gene_id), ]
+SVAs <- significant_TE[grepl("SVA", significant_TE$gene_id), ]
+
+# View specific TEs
+head(LINEs)
+head(SINEs)
+head(ERVs)
+head(SVAs)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
