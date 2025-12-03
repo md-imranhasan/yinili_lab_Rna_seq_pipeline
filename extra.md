@@ -7,6 +7,7 @@ featureCounts -T 16 -p -B -C -s 2 \
 
 
 
+
 featureCounts -T 16 -p -B -C -s 2 \
   -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Repeatmasker/T2T_CHM13v2_hs1_repeatmasker.gtf \
   -F GTF -t exon -g gene_id \
