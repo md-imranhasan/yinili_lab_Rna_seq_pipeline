@@ -860,65 +860,60 @@ Output:
 
 TE_family_counts.txt → matrix of TE family counts (rows = family, cols = samples)
 
+# Update 12/2/2025
 
 
 
 
 Filter the gene count file
 ```bash
-# 1) Load the featureCounts output (genes)
+# 1. Load the data
+file_path <- "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/motor_cortex_(medial)/T2T_CHM13v2_gene_expression_counts_fractional_12_3.txt"
+
 gene_counts <- read.delim(
-  "D:/Yini Li Lab/Frontal_Cortex/T2T_CHM13v2_Liftoff_gene_counts_all.txt",
+  file_path,
   comment.char = "#",
   check.names = FALSE
 )
 
-# Quick sanity check
-head(gene_counts[, 1:8])
-```
+# 2. Extract ONLY the count columns (Column 7 to the end)
+#    Columns 1-6 are metadata (Geneid, Chr, etc.)
+count_cols_index <- 7:ncol(gene_counts)
+count_mat <- as.matrix(gene_counts[, count_cols_index])
 
-We see columns like:
+# 3. Apply the Strict Filter
+#    Logic: Count how many samples have >= 5 reads.
+#    Keep IF that number equals the TOTAL number of sample columns.
+min_reads <- 5
+total_samples <- ncol(count_mat)
 
-Geneid, Chr, Start, End, Strand, Length
+# Create boolean matrix (TRUE/FALSE)
+pass_matrix <- count_mat >= min_reads
 
-then one column per sample: SRRxxxx.clean.bam
+# Sum the TRUEs per row
+samples_passing <- rowSums(pass_matrix)
 
+# Check if ALL samples passed
+keep_genes <- samples_passing == total_samples
 
-Step 2 – Pull out the count matrix (only sample columns)
-```bash
-# 2) Identify sample columns (end with .clean.bam)
-sample_cols <- grep("\\.clean.bam$", colnames(gene_counts), value = TRUE)
+# 4. Print Summary
+cat("Original Gene Count:", nrow(gene_counts), "\n")
+cat("Genes Kept (>=5 reads in EVERY sample):", sum(keep_genes), "\n")
+cat("Genes Removed:", sum(!keep_genes), "\n")
 
-# 3) Build the numeric matrix of counts
-gene_mat <- as.matrix(gene_counts[, sample_cols])
-storage.mode(gene_mat) <- "integer"
-```
-
-Step 3 – Define the filter: keep genes with total counts ≥ 10
-```bash
-# 4) Compute total counts per gene across all samples
-gene_totals <- rowSums(gene_mat)
-
-# 5) Find genes to keep: total count >= 10
-keep_genes <- gene_totals >= 10
-
-# How many are kept vs removed?
-table(keep_genes)
-```
-
-Step 4 – Apply the filter and save a new filtered file
-```bash
-# 6) Subset the original data.frame to only kept genes
+# 5. Subset the original dataframe
+#    This keeps columns 1-6 intact and filters the rows.
 gene_counts_filtered <- gene_counts[keep_genes, ]
 
-# 7) Write to a new file
+# 6. Save to file
 write.table(
   gene_counts_filtered,
-  file = "D:/Yini Li Lab/Frontal_Cortex/T2T_CHM13v2_Liftoff_gene_counts_all_filtered10.txt",
+  file = "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/motor_cortex_(medial)/T2T_CHM13v2_motor_cortex_(medial)_gene_expression_counts_Multi_fraction_12_3_2025_filtered_5.txt",
   sep = "\t",
   quote = FALSE,
   row.names = FALSE
 )
+
 ```
 
 
