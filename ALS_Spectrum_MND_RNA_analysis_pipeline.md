@@ -725,7 +725,7 @@ RepeatMasker is a tool that identifies repetitive DNA elements in a genome. The 
 
 ```text
 featureCounts -T 16 -p -B -C -s 2 \
-  -f -M --fraction \
+  -f -O -M --fraction \
   -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Repeatmasker/T2T_CHM13v2_hs1_repeatmasker.gtf \
   -F GTF -t exon -g gene_id \
   -o TE_counts_multi_raw_12_5_New.txt \
