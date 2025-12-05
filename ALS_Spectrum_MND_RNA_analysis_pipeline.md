@@ -830,15 +830,15 @@ featureCounts -T 16 -p -B -C -s 2 \
   -o TE_fractional_counts_gft_unique.txt \
   *.clean.bam
 ```
-
-### For Fractional Multi-mapping Reads
+# Final Update (12/5/2025) use that (only)
+### For Fractional Multi-mapping Reads 
 ```text
 featureCounts -T 16 -p -B -C -s 2 \
+  -f -O -M --fraction \
   -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Repeatmasker/T2T_CHM13v2_hs1_repeatmasker.gtf \
   -F GTF -t exon -g gene_id \
-  -M --fraction 
-  -o TE_fractional_counts_gft_unique.txt \
-  *.clean.bam
+  -o TE_counts_locus_raw_12_5_New.txt \
+  case/hisat2_t2t_bam/*.clean.bam control/hisat2_t2t_bam/*.clean.bam
 ```
 
 
