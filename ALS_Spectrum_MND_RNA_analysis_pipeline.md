@@ -687,188 +687,68 @@ echo "Summary table saved to: ${SUMMARY}"
 
 
 
-# Update 11/24/2025 
+# Update 12/5/2025
+
 ## Quantify & Annotation repeat RNAs with RepeatMasker (T2T)
-#### Prepare a RepeatMasker annotation for counting (SAF for featureCounts)
+
+ ## For genes we are using T2T_CHM13v2_hs1_liftoff_genes.gtf
+### For Fractional Multi-mapping Reads
+```bash
+featureCounts -T 16 -p -B -C -s 2 \
+  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/T2T_CHM13v2_hs1_liftoff_genes.gtf \
+  -F GTF -t exon -g gene_id \
+  -f -M --fraction \
+  -o T2T_CHM13v2_gene_expression_counts_multi_fractional_update_hs1_liftoff_genes_12_5_2025.txt \
+  case/hisat2_t2t_bam/*.clean.bam \
+  control/hisat2_t2t_bam/*.clean.bam
+```
+
+### For Unique Reads
+
+```bash
+featureCounts -T 16 -p -B -C -s 2 \
+  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/T2T_CHM13v2_hs1_liftoff_genes.gtf \
+  -F GTF -t exon -g gene_id \
+  -f \
+  -o T2T_CHM13v2_gene_expression_counts_multi_fractional_update_hs1_liftoff_genes_12_5_2025.txt \
+  case/hisat2_t2t_bam/*.clean.bam \
+  control/hisat2_t2t_bam/*.clean.bam
+```
+
+
+
+
+#### Prepare a RepeatMasker annotation for counting 
 RepeatMasker is a tool that identifies repetitive DNA elements in a genome. The RepeatMasker annotation is a list of all repetitive elements that have been annotated and categorized in the genome.
-
-Files we have:
-
-Gene GTF (GCF_009914755.1_T2T-CHM13v2.0_genomic.gtf): This file contains the gene-level annotation (genes, transcripts, exons, etc.) for the T2T CHM13 v2.0 genome.
-
-RepeatMasker GTF (T2T_CHM13v2_hs1_repeatmasker.gtf): This file contains the RepeatMasker annotations (TEs like LINEs, LTRs, Simple repeats, etc.).
-
-### 1️⃣ Combine Gene and Repeat Annotations (GTF)
-
-
-```bash
-cd /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/
-
-# Combine both gene and repeat GTFs into one file
-cat GCF_009914755.1_T2T-CHM13v2.0_genomic.gtf T2T_CHM13v2_hs1_repeatmasker.gtf > T2T_CHM13v2_combined.gtf
-```
-
-Important step: Sort the combined GTF
-```bash
-sort -k1,1 -k4,4n T2T_CHM13v2_combined.gtf > T2T_CHM13v2_combined_sorted.gtf
-```
-
-
-
-RepeatMasker GTF or SAF annotation contains:
-```text
-Element names (e.g., L1MC3#LINE/L1, AluY#SINE/Alu)
-
-Chromosome locations (e.g., chr1, chr22)
-
-Start and end positions of the repetitive elements
-
-Strand information (whether the element is on the + or - strand)
-```
-
-```bash
-cd /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/Repeatmasker
-
-awk '
-BEGIN {
-    FS = "\t";
-    OFS = "\t";
-    print "GeneID","Chr","Start","End","Strand";
-}
-# Skip comments
-/^#/ { next }
-
-{
-    chr=$1; start=$4; end=$5; strand=$7;
-
-    # attribute column
-    attr=$9;
-
-    # Extract gene_id from the attribute field
-    match(attr, /gene_id "([^"]+)"/, arr);
-    gene_id = arr[1];
-
-    if (gene_id == "" || gene_id == NULL) {
-        gene_id = "TE_"NR;
-    }
-
-    # Print SAF
-    print gene_id, chr, start, end, strand;
-}
-' T2T_CHM13v2_hs1_repeatmasker.gtf > T2T_CHM13v2_repeatmasker.saf
-
-```
-
-
-#### (Optional but recommended) Create FAMILY-level SAF
-
-```bash
-awk '
-BEGIN {
-    FS="\t"; OFS="\t";
-    print "GeneID","Chr","Start","End","Strand";
-}
-!/^#/ {
-    chr=$1; start=$4; end=$5; strand=$7;
-
-    # Extract gene_id
-    match($9, /gene_id "([^"]+)"/, arr);
-    full=arr[1];     # e.g., L1MC3#LINE/L1
-
-    split(full, a, "#");
-    fam=a[2];        # e.g., LINE/L1
-
-    if (fam == "" || fam == NULL) fam = "UNKNOWN";
-
-    print fam, chr, start, end, strand;
-}
-' T2T_CHM13v2_hs1_repeatmasker.gtf > T2T_CHM13v2_repeatmasker_family.saf
-
-```
-
-
-
-
-## featureCounts on RepeatsRNA
-Per Family TE count (recommended)
-
-cd /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/case/hisat2_t2t_bam
-```bash
-featureCounts -T 16 -p -B -C -s 2 \
-  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/Repeatmasker/T2T_CHM13v2_repeatmasker.saf \
-  -F SAF \
-  -o TE_element_counts_with_BC.txt \
-  *.clean.bam
-
-```
-
-### For Unique Reads (Exclude Multi-mapped Reads) - Using .SAF
-```bash
-featureCounts -T 16 -p -B -C -s 2 \
-  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/Repeatmasker/T2T_CHM13v2_repeatmasker.saf \
-  -F SAF \
-  -o TE_unique_counts.txt \
-  *.clean.bam
-```
-
+# TE Counting (Fractional Multi-mapping Reads) (corrected 12_5_2025)
 ### For Fractional Multi-mapping Reads
 
-```bash
+```text
 featureCounts -T 16 -p -B -C -s 2 \
-  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Refer_T2T/Repeatmasker/T2T_CHM13v2_repeatmasker.saf \
-  -F SAF \
-  -M --fraction \
-  -o TE_fractional_counts.txt \
-  *.clean.bam
+  -f -M --fraction \
+  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Repeatmasker/T2T_CHM13v2_hs1_repeatmasker.gtf \
+  -F GTF -t exon -g gene_id \
+  -o TE_counts_multi_raw_12_5_New.txt \
+  case/hisat2_t2t_bam/*.clean.bam control/hisat2_t2t_bam/*.clean.bam
 ```
 
-#### For Unique Reads (Exclude Multi-mapped Reads) - Using .gtf
-```text
+### For Unique Reads
+
+```bash
 featureCounts -T 16 -p -B -C -s 2 \
+  -f -M --fraction \
   -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Repeatmasker/T2T_CHM13v2_hs1_repeatmasker.gtf \
   -F GTF -t exon -g gene_id \
-  -o TE_fractional_counts_gft_unique.txt \
-  *.clean.bam
-```
-# Final Update (12/5/2025) use that (only)
-### For Fractional Multi-mapping Reads 
-```text
-featureCounts -T 16 -p -B -C -s 2 \
-  -f -O -M --fraction \
-  -a /depot/yinili/data/Li_lab/GSE124439_Hammell2019/Repeatmasker/T2T_CHM13v2_hs1_repeatmasker.gtf \
-  -F GTF -t exon -g gene_id \
-  -o TE_counts_locus_raw_12_5_New.txt \
+  -o TE_counts_multi_raw_12_5_New.txt \
   case/hisat2_t2t_bam/*.clean.bam control/hisat2_t2t_bam/*.clean.bam
 ```
 
 
-Explanation:
-```text
--T 16 – 16 threads
+## Filter the gene count file
 
--p – paired-end
-
--s 2 – reverse-stranded, matches your --rna-strandness RF
-
--F SAF – annotation is in SAF format
-
-*.clean.bam – only use your final cleaned BAMs
-
-If we want - we can use : -M -O --fraction – count reads that map to multiple features and fractionally assign them
-```
-Output:
-
-TE_family_counts.txt → matrix of TE family counts (rows = family, cols = samples)
-
-# Update 12/2/2025
-
-
-
-
-Filter the gene count file
 ```bash
 # 1. Load the data
-file_path <- "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/motor_cortex_(medial)/T2T_CHM13v2_gene_expression_counts_fractional_12_3.txt"
+file_path <- "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/T2T_CHM13v2_gene_expression_counts_multi_fractional_update_hs1_liftoff_genes_12_5_2025.txt"
 
 gene_counts <- read.delim(
   file_path,
@@ -908,190 +788,363 @@ gene_counts_filtered <- gene_counts[keep_genes, ]
 # 6. Save to file
 write.table(
   gene_counts_filtered,
-  file = "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/motor_cortex_(medial)/T2T_CHM13v2_motor_cortex_(medial)_gene_expression_counts_Multi_fraction_12_3_2025_filtered_5.txt",
+  file = "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/T2T_CHM13v2_gene_expression_counts_multi_fractional_update_hs1_liftoff_genes_12_5_2025_filtered_5.txt",
   sep = "\t",
   quote = FALSE,
   row.names = FALSE
 )
-
 ```
 
 
 
+# Planning to DO NEXT STEPS
+#### Gene Expression and TE-Level Counting: Downstream Analysis
+### Quality Control (QC) of Count Data
 
-
-
-
-### 1. Check for Quality and Completeness of the Count Files
-Before proceeding with any further analysis, ensure the count files (e.g., `TE_counts_filtered_10.txt`, `gene_expression_counts_filtered_10.txt`) have been successfully generated.
-
-- Check for **missing values** or **empty columns** in the count files.
-- Verify that each sample has **non-zero counts** across different features (genes/repeats).
 
 ```bash
-# Example of a quick check of the first few lines of the output
-head T2T_CHM13v2_gene_expression_counts_filtered_10.txt
-```
-
-2. Plot Histograms of Raw Counts
-
-Create histograms to visualize the distribution of raw counts across different samples and features.
-
-This will help assess bias in the data and understand the count distribution
-
-```bash
-library(ggplot2)
-
-# Read the gene count data
-counts_data <- read.table("T2T_CHM13v2_gene_expression_counts_filtered_10.txt", header=TRUE, row.names=1)
-
-# Plot histogram of counts
-ggplot(as.data.frame(counts_data), aes(x=log2(counts_data + 1))) + 
-  geom_histogram(binwidth=0.1) + 
-  labs(title="Gene Expression Counts Distribution", x="Log2 Transformed Counts", y="Frequency")
-```
-
-
-Data Normalization
-
-Normalization ensures that the counts across different samples are comparable and removes unwanted biases (such as sequencing depth).
-
-a. For Gene Expression
-
-Use DESeq2 for normalizing and analyzing gene expression data.
-
-1. Install DESeq2 (if not installed):
-```  
-install.packages("DESeq2")
-```
-
-2. Prepare Data:
-
-Import the count data generated from featureCounts.
-
-Construct a DESeqDataSet object.
-```
 library(DESeq2)
 
-# Load count data for genes (rows are genes, columns are samples)
-counts_data <- read.table("T2T_CHM13v2_gene_expression_counts_filtered_10.txt", header=TRUE, row.names=1)
+############################################################
+## 1. Read featureCounts output
+############################################################
 
-# Create DESeqDataSet from count data
-dds <- DESeqDataSetFromMatrix(countData = counts_data, 
-                              colData = coldata, # This should be a data.frame with sample information
-                              design = ~ condition)  # condition is the variable you're interested in
-```
+# Change this path if needed:
+counts <- read.delim(
+  "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/T2T_CHM13v2_gene_expression_counts_multi_fractional_update_hs1_liftoff_genes_12_5_2025_filtered_5.txt",
+  comment.char = "#",
+  check.names = FALSE
+)
 
-3. Normalization:
+# Quick sanity check (optional)
+# head(counts[, 1:8])
 
-DESeq2 will perform normalization internally when running the DE analysis.
+############################################################
+## 2. Clean sample column names (remove folder paths)
+############################################################
 
-```
+# Columns that are sample BAMs
+sample_cols_full <- grep("\\.clean\\.bam$", colnames(counts), value = TRUE)
+
+# Remove directory prefixes like "case/hisat2_t2t_bam/"
+clean_names <- basename(sample_cols_full)
+
+# Replace column names
+colnames(counts)[match(sample_cols_full, colnames(counts))] <- clean_names
+
+# Re-detect sample columns with cleaned names
+sample_cols <- grep("\\.clean\\.bam$", colnames(counts), value = TRUE)
+
+############################################################
+## 3. Build count matrix
+############################################################
+
+# Some gene IDs can be duplicated → make unique feature IDs
+counts$feature_id <- make.unique(as.character(counts$Geneid))
+
+# Extract counts only for sample columns
+counts_mat <- as.matrix(counts[, sample_cols])
+
+# Make sure they are integers (DESeq2 requirement)
+storage.mode(counts_mat) <- "integer"
+
+# Replace any NA with 0 (should be rare)
+counts_mat[is.na(counts_mat)] <- 0L
+
+# Set rownames to unique feature IDs
+rownames(counts_mat) <- counts$feature_id
+
+# Optional check:
+dim(counts_mat)
+counts_mat[1:5, 1:5]
+
+############################################################
+## 4. Define case vs control samples
+############################################################
+
+# Your sample IDs (exactly as you listed)
+case_ids <- c(
+  "SRR8375274","SRR8375275","SRR8375276","SRR8375277","SRR8375278",
+  "SRR8375279","SRR8375280","SRR8375281","SRR8375283","SRR8375284",
+  "SRR8375285","SRR8375286","SRR8375307","SRR8375308","SRR8375309",
+  "SRR8375311","SRR8375312","SRR8375324","SRR8375325","SRR8375327",
+  "SRR8375328","SRR8375329","SRR8375331","SRR8375333","SRR8375335",
+  "SRR8375336","SRR8375337","SRR8375338","SRR8375341","SRR8375345",
+  "SRR8375347","SRR8375357","SRR8375362","SRR8375363","SRR8375364",
+  "SRR8375365","SRR8375366","SRR8375370","SRR8375371","SRR8375372",
+  "SRR8375374","SRR8375376","SRR8375383","SRR8375385","SRR8375386",
+  "SRR8375387","SRR8375388","SRR8375389","SRR8375390","SRR8375391",
+  "SRR8375392","SRR8375393","SRR8375394","SRR8375395","SRR8375396",
+  "SRR8375411","SRR8375414","SRR8375418","SRR8375421","SRR8375424",
+  "SRR8375429","SRR8375432","SRR8375437","SRR8375445","SRR8375448"
+)
+
+control_ids <- c(
+  "SRR8375282","SRR8375310","SRR8375326","SRR8375369","SRR8375373",
+  "SRR8375381","SRR8375382","SRR8375384","SRR8375375"
+)
+
+# Get plain SRR IDs from column names: "SRRxxxxxx.clean.bam" → "SRRxxxxxx"
+samples    <- colnames(counts_mat)
+sample_ids <- sub("\\.clean\\.bam$", "", samples)
+
+# Initialize condition vector
+condition <- rep(NA_character_, length(sample_ids))
+
+# Assign case / control
+condition[sample_ids %in% case_ids]    <- "case"
+condition[sample_ids %in% control_ids] <- "control"
+
+# Check if any sample was not assigned
+if (any(is.na(condition))) {
+  warning("Some samples were not assigned to case or control. Check these IDs:\n",
+          paste(sample_ids[is.na(condition)], collapse = ", "))
+}
+
+# Make condition a factor; control as reference level
+condition <- factor(condition, levels = c("control", "case"))
+
+# Build colData
+coldata <- data.frame(
+  row.names = samples,
+  condition = condition
+)
+
+# Quick sanity checks
+print(table(coldata$condition))
+head(coldata)
+
+############################################################
+## 5. Create DESeq2 object and run DE analysis
+############################################################
+
+dds <- DESeqDataSetFromMatrix(
+  countData = counts_mat,
+  colData   = coldata,
+  design    = ~ condition
+)
+
+# Run DESeq2 pipeline
 dds <- DESeq(dds)
-normalized_counts <- counts(dds, normalized=TRUE)
+
+# Get results: case vs control
+res <- results(dds, contrast = c("condition", "case", "control"))
+
+# Order by adjusted p-value
+res_ordered <- res[order(res$padj), ]
+
+# Peek at top genes
+head(res_ordered)
+
+############################################################
+## 6. Save results to CSV
+############################################################
+
+write.csv(
+  as.data.frame(res_ordered),
+  file = "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/T2T_CHM13v2_gene_expression_counts_multi_fractional_update_hs1_liftoff_genes_12_5_2025_DEG.csv"
+)
+
+############################################################
+## 7. (Optional) VST and PCA plot
+############################################################
+
+# Variance stabilizing transform
+vsd <- vst(dds, blind = FALSE)
+
+# Basic PCA plot by condition
+plotPCA(vsd, intgroup = "condition")
+
+
+plotMA(res, ylim = c(-5, 5))
+
+
+# res is your DESeq2 results table
+res_df <- as.data.frame(res)
+
+# Basic volcano plot
+with(res_df, plot(
+  log2FoldChange,
+  -log10(pvalue),
+  pch = 20,
+  col = ifelse(padj < 0.05 & abs(log2FoldChange) > 1, "red", "blue"),
+  xlab = "log2 Fold Change",
+  ylab = "-log10(p-value)",
+  main = "Volcano Plot"
+))
+
+
+
+library(ggplot2)
+
+res_df <- as.data.frame(res)
+
+res_df$threshold <- with(res_df,
+                         padj < 0.05 & abs(log2FoldChange) > 1)
+
+ggplot(res_df, aes(x = log2FoldChange, y = -log10(pvalue))) +
+  geom_point(aes(color = threshold), alpha = 0.6) +
+  scale_color_manual(values = c("yellow", "red")) +
+  theme_bw() +
+  xlab("log2 Fold Change") +
+  ylab("-log10(p-value)") +
+  ggtitle("Volcano Plot (Simple)") +
+  theme(legend.position = "none")
+
+
+res_df <- subset(res_df, !is.na(pvalue))
+
+
+
+
+
+dds       # your DESeqDataSet
+res       # results(dds, ...)
+res_ordered <- res[order(res$padj), ]
+
+# Basic MA plot
+plotMA(res, ylim = c(-5, 5), main = "MA plot: case vs control")
+
+res_df <- as.data.frame(res)
+res_df <- subset(res_df, !is.na(baseMean) & !is.na(log2FoldChange))
+
+with(res_df, plot(
+  log10(baseMean),
+  log2FoldChange,
+  pch = 20,
+  col = "grey50",
+  xlab = "log10(mean expression)",
+  ylab = "log2 Fold Change (case / control)",
+  main = "MA Plot (simple)"
+))
+
+# Highlight significant points
+with(subset(res_df, padj < 0.05),
+     points(log10(baseMean), log2FoldChange, pch = 20, col = "red"))
+abline(h = 0, col = "blue", lty = 2)
+
+
+
+
+library(DESeq2)
+
+vsd <- vst(dds, blind = FALSE)
+
+mat <- assay(vsd)
+pc  <- prcomp(t(mat))  # PCA on samples
+
+# Percentage variance
+var_expl <- (pc$sdev^2) / sum(pc$sdev^2) * 100
+
+# Get condition from colData
+cond <- colData(dds)$condition
+
+plot(pc$x[,1], pc$x[,2],
+     pch = 19,
+     col = ifelse(cond == "case", "red", "blue"),
+     xlab = paste0("PC1 (", round(var_expl[1], 1), "%)"),
+     ylab = paste0("PC2 (", round(var_expl[2], 1), "%)"),
+     main = "PCA: samples")
+legend("topright", legend = c("case", "control"),
+       col = c("red", "blue"), pch = 19)
+
+
+
+
+
+# Take top 50 DEGs
+res_df <- as.data.frame(res_ordered)
+res_df <- subset(res_df, !is.na(padj))
+topgenes <- rownames(res_df)[1:50]
+
+mat_top <- assay(vsd)[topgenes, ]
+
+# Scale rows (genes) for better contrast
+mat_scaled <- t(scale(t(mat_top)))  # z-score per gene
+
+# Simple heatmap
+heatmap(mat_scaled,
+        Colv = TRUE,
+        Rowv = TRUE,
+        scale = "none",
+        col = colorRampPalette(c("blue", "white", "red"))(50),
+        labRow = topgenes,
+        main = "Top 50 DEGs (VST, row-scaled)")
+
+
+
+
+
+
+
+# install.packages("pheatmap")   # if not already installed
+library(pheatmap)
+
+res_df <- as.data.frame(res_ordered)
+res_df <- subset(res_df, !is.na(padj))
+topgenes <- rownames(res_df)[1:50]
+
+mat_top <- assay(vsd)[topgenes, ]
+
+# Row-scaled heatmap
+pheatmap(mat_top,
+         scale = "row",
+         show_rownames = TRUE,
+         show_colnames = FALSE,
+         main = "Top 50 DEGs (VST, row-scaled)")
+
+
+
+
+
+annotation_col <- data.frame(
+  condition = colData(vsd)$condition
+)
+rownames(annotation_col) <- colnames(vsd)
+
+pheatmap(mat_top,
+         scale = "row",
+         annotation_col = annotation_col,
+         show_rownames = TRUE,
+         show_colnames = FALSE,
+         main = "Top 50 DEGs (VST, row-scaled)")
+
+
+
+
+
+
+
+
+
+
+
+
+
+#####find out the significant ones################
+res_df <- as.data.frame(res)
+
+# Remove NA values (required to avoid errors)
+res_df <- subset(res_df, !is.na(padj) & !is.na(log2FoldChange))
+
+# Add gene name column
+res_df$gene <- rownames(res_df)
+
+
+sig <- subset(res_df, padj < 0.05 & abs(log2FoldChange) > 1)
+sig
+
+
+
+up   <- subset(sig_TEs, log2FoldChange > 1)
+down <- subset(sig_TEs, log2FoldChange < -1)
+
+cat("Total significant genes: ", nrow(sig), "\n")
+cat("Upregulated genes: ", nrow(up), "\n")
+cat("Downregulated genes: ", nrow(down), "\n")
+
+head(sig[order(sig$padj), ])
 ```
-
-b. For Repeat (TE) Counts
-Repeat element data normalization can also be done using DESeq2. The process is similar to the gene expression pipeline.
-```bash
-# For TE count data
-TE_counts <- read.table("T2T_CHM13v2_repeatmasker_TE_counts_filtered_10.txt", header=TRUE, row.names=1)
-
-# DESeq2 normalization for TE counts
-dds_TE <- DESeqDataSetFromMatrix(countData = TE_counts, 
-                                  colData = coldata, 
-                                  design = ~ condition)
-dds_TE <- DESeq(dds_TE)
-normalized_TE_counts <- counts(dds_TE, normalized=TRUE)
-
-```
-
-6️⃣ Differential Expression Analysis
-
-Once the counts are normalized, you can perform differential expression analysis to compare gene expression and TE activity between different conditions (e.g., ALS vs. control).
-
-Gene Expression Differential Analysis with DESeq2:
-```bash
-# DESeq2 analysis for differential gene expression
-res_gene <- results(dds)
-
-# Summarize results
-summary(res_gene)
-
-# Plot results (MA plot)
-plotMA(res_gene, main="DESeq2: Differential Gene Expression")
-
-# Export results
-write.csv(as.data.frame(res_gene), "DEG_results.csv")
-```
-
-Repeat (TE) Differential Analysis with DESeq2
-```
-# Differential analysis for TE activity
-res_TE <- results(dds_TE)
-
-# Summarize results
-summary(res_TE)
-
-# Plot results (MA plot)
-plotMA(res_TE, main="DESeq2: Differential TE Expression")
-
-# Export results
-write.csv(as.data.frame(res_TE), "DE_TE_results.csv")
-```
-
-
-
-
-# 1️⃣ Differential TE Expression Results (DESeq2)
-After running DESeq2 for your RepeatMasker annotations (such as in the previous example for T2T_CHM13v2_hs1_repeatmasker.gtf), you'll have a result table that includes log2 fold changes and adjusted p-values for each repeat element.
-
-Now you have the results stored in res_TE.
-
-```bash
-# Example of loading TE results into DESeq2
-res_TE <- results(dds_TE)
-```
-
-2️⃣ Filter TEs Based on Significance
-
- Filter the results to identify significantly differentially expressed TEs based on our chosen thresholds (e.g., padj < 0.05 and |log2FoldChange| > 1).
-```bash
- # Filter significant TEs based on padj and log2FoldChange
-significant_TE <- res_TE[res_TE$padj < 0.05 & abs(res_TE$log2FoldChange) > 1, ]
-
-# View the significant TEs
-head(significant_TE)
-```
-
-3️⃣ Identifying Specific Transposable Elements
-We can extract the gene_id or transcript_id to identify the specific type of repeat element (e.g., LINEs, SINEs, ERVs, etc.).
-
-The RepeatMasker GTF file typically contains repeat annotations in the gene_id or transcript_id fields (e.g., L1MC3#LINE/L1, SVA, LTR, ERV, etc.). We can filter or group our results by these annotations.
-```bash
-# Extracting gene_id (repeat element family)
-significant_TE$gene_id <- rownames(significant_TE)
-
-# Filter specific repeat families like LINE, SINE, LTR
-LINEs <- significant_TE[grepl("LINE", significant_TE$gene_id), ]
-SINEs <- significant_TE[grepl("SINE", significant_TE$gene_id), ]
-ERVs <- significant_TE[grepl("ERV", significant_TE$gene_id), ]
-SVAs <- significant_TE[grepl("SVA", significant_TE$gene_id), ]
-
-# View specific TEs
-head(LINEs)
-head(SINEs)
-head(ERVs)
-head(SVAs)
-```
-
-
-
-
-
-
-
-
 
 
 
