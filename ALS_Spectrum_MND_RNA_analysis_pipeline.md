@@ -1149,4 +1149,398 @@ head(sig[order(sig$padj), ])
 
 
 
+```bash
+# Final DESEQ2 Code
 
+
+
+################################################################################
+## RNA-seq Analysis Pipeline: DESeq2
+################################################################################
+#T2T_CHM13v2_gene_expression_counts_fractional_update_hs1_liftoff_genes_12_5_2025_filtered_5.txt
+#T2T_CHM13v2_gene_expression_counts_Frontal_Unique_update_hs1_liftoff_genes_12_5_2025_filtered_5.txt
+# 0. Load required libraries
+library(DESeq2)
+library(ggplot2)
+library(pheatmap)
+
+############################################################
+## 1. Read input data
+############################################################
+
+# Load the file
+counts <- read.delim(
+  "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/motor_cortex_(lateral)/T2T_CHM13v2_gene_expression_counts_lateral__multi_fractional_update_hs1_liftoff_genes_12_8_2025_filtered_5.txt",
+  comment.char = "#",
+  check.names = FALSE
+)
+
+############################################################
+## 2. Clean sample column names
+############################################################
+
+# Identify columns containing count data (ending in .clean.bam)
+sample_cols_full <- grep("\\.clean\\.bam$", colnames(counts), value = TRUE)
+
+# Clean the names (remove directory paths)
+clean_names <- basename(sample_cols_full)
+colnames(counts)[match(sample_cols_full, colnames(counts))] <- clean_names
+
+# Re-detect sample columns using the new clean names
+sample_cols <- grep("\\.clean\\.bam$", colnames(counts), value = TRUE)
+
+############################################################
+## 3. Build count matrix
+############################################################
+
+# Ensure feature IDs are unique
+counts$feature_id <- make.unique(as.character(counts$Geneid))
+
+
+# Extract count data matrix
+counts_mat <- as.matrix(counts[, sample_cols])
+
+# CRITICAL: DESeq2 requires integers. 
+# Since input is fractional, we assume integer mode (truncates/rounds implicitly)
+storage.mode(counts_mat) <- "integer"
+
+# Replace NAs with 0
+counts_mat[is.na(counts_mat)] <- 0L
+
+# Set rownames
+rownames(counts_mat) <- counts$feature_id
+
+cat("Initial Matrix Dimensions:", dim(counts_mat), "\n")
+
+############################################################
+## 4. Define Case vs Control & Subset Matrix (CRITICAL FIX)
+############################################################
+
+# Define your sample lists
+case_ids <- c(
+  "SRR8375274","SRR8375275","SRR8375276","SRR8375277","SRR8375278",
+  "SRR8375279","SRR8375280","SRR8375281","SRR8375283","SRR8375284",
+  "SRR8375285","SRR8375286","SRR8375307","SRR8375308","SRR8375309",
+  "SRR8375311","SRR8375312","SRR8375324","SRR8375325","SRR8375327",
+  "SRR8375328","SRR8375329","SRR8375331","SRR8375333","SRR8375335",
+  "SRR8375336","SRR8375337","SRR8375338","SRR8375341","SRR8375345",
+  "SRR8375347","SRR8375357","SRR8375362","SRR8375363","SRR8375364",
+  "SRR8375365","SRR8375366","SRR8375370","SRR8375371","SRR8375372",
+  "SRR8375374","SRR8375376","SRR8375383","SRR8375385","SRR8375386",
+  "SRR8375387","SRR8375388","SRR8375389","SRR8375390","SRR8375391",
+  "SRR8375392","SRR8375393","SRR8375394","SRR8375395","SRR8375396",
+  "SRR8375411","SRR8375414","SRR8375418","SRR8375421","SRR8375424",
+  "SRR8375429","SRR8375432","SRR8375437","SRR8375445","SRR8375448"
+)
+
+control_ids <- c(
+  "SRR8375282","SRR8375310","SRR8375326","SRR8375369","SRR8375373",
+  "SRR8375381","SRR8375382","SRR8375384","SRR8375375"
+)
+
+
+
+
+
+# Extract plain sample IDs from columns
+current_cols <- colnames(counts_mat)
+sample_ids_stripped <- sub("\\.clean\\.bam$", "", current_cols)
+
+# Create metadata frame
+coldata <- data.frame(
+  row.names = current_cols,
+  SampleID  = sample_ids_stripped,
+  condition = NA # Initialize as NA
+)
+
+# Assign conditions
+coldata$condition[coldata$SampleID %in% case_ids]    <- "case"
+coldata$condition[coldata$SampleID %in% control_ids] <- "control"
+
+# --- THE FIX STARTS HERE ---
+# Remove samples from the matrix that are not in your case/control lists
+# (This prevents NAs in the design, which crashes DESeq2)
+keep_samples <- !is.na(coldata$condition)
+
+counts_mat <- counts_mat[, keep_samples]
+coldata    <- coldata[keep_samples, ]
+
+# Make condition a factor and SET REFERENCE LEVEL
+# This ensures "control" is the baseline (Denominator)
+coldata$condition <- factor(coldata$condition, levels = c("control", "case"))
+coldata$condition <- relevel(coldata$condition, ref = "control")
+
+cat("Final Dimensions for Analysis:", dim(counts_mat), "\n")
+print(table(coldata$condition))
+# --- THE FIX ENDS HERE ---
+
+############################################################
+## 5. Run DESeq2
+############################################################
+
+dds <- DESeqDataSetFromMatrix(
+  countData = counts_mat,
+  colData   = coldata,
+  design    = ~ condition
+)
+
+# Run the pipeline
+dds <- DESeq(dds)
+
+# Get Results
+res <- results(dds) # Automatically uses Case vs Control because we set the reference
+
+# Order by significance
+res_ordered <- res[order(res$padj), ]
+
+# Export Results
+write.csv(as.data.frame(res_ordered), 
+          file = "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/Frontal_Cortex/T2T_CHM13v2_gene_counts_DESeq2_Unique_results_12_9.csv")
+
+############################################################
+## 6. Visualization
+############################################################
+
+# --- A. PCA Plot ---
+vsd <- vst(dds, blind = FALSE)
+pcaData <- plotPCA(vsd, intgroup = "condition", returnData = TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+ggplot(pcaData, aes(PC1, PC2, color = condition)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  ggtitle("PCA Plot: Case vs Control") +
+  theme_bw()
+
+# --- B. Volcano Plot ---
+res_df <- as.data.frame(res)
+# Create a logical column for coloring (padj < 0.05 and FoldChange > 2 aka log2FC > 1)
+res_df$Significant <- ifelse(res_df$padj < 0.05 & abs(res_df$log2FoldChange) > 1, "Yes", "No")
+res_df$Significant[is.na(res_df$Significant)] <- "No"
+
+ggplot(res_df, aes(x = log2FoldChange, y = -log10(pvalue))) +
+  geom_point(aes(color = Significant), alpha = 0.6, size = 1.5) +
+  scale_color_manual(values = c("grey", "red")) +
+  theme_bw() +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+  ggtitle("Volcano Plot")
+
+# --- C. Heatmap of Top 50 Genes ---
+res_clean <- subset(res_ordered, !is.na(padj))
+top_genes <- rownames(res_clean)[1:50]
+mat_top   <- assay(vsd)[top_genes, ]
+
+anno_col <- data.frame(Condition = coldata$condition)
+rownames(anno_col) <- colnames(mat_top)
+
+pheatmap(mat_top,
+         scale = "row",
+         annotation_col = anno_col,
+         show_rownames = TRUE,
+         show_colnames = FALSE,
+         main = "Top 50 DEGs (VST Z-score)")
+
+############################################################
+## 7. Summary Counts
+############################################################
+
+sig_res <- subset(res_df, padj < 0.05 & abs(log2FoldChange) > 1)
+up_genes   <- subset(sig_res, log2FoldChange > 1)
+down_genes <- subset(sig_res, log2FoldChange < -1)
+
+cat("----------------------------------\n")
+cat("Summary of Significant Genes (padj < 0.05, |LFC| > 1):\n")
+cat("Total Significant:", nrow(sig_res), "\n")
+cat("Upregulated:      ", nrow(up_genes), "\n")
+cat("Downregulated:    ", nrow(down_genes), "\n")
+cat("----------------------------------\n")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################control mentioned################
+################################################################################
+## RNA-seq Analysis: DESeq2 (Cases vs 4 Controls)
+## Input: ALREADY FILTERED fractional counts
+################################################################################
+
+# 0. Load Libraries
+library(DESeq2)
+library(ggplot2)
+library(pheatmap)
+
+############################################################
+## 1. Read input data
+############################################################
+
+counts <- read.delim(
+  "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/motor_cortex_(medial)/T2T_CHM13v2_gene_expression_counts_medial_Unique_update_hs1_liftoff_genes_12_8_2025_filtered_5.txt",
+  comment.char = "#",
+  check.names = FALSE
+)
+
+############################################################
+## 2. Clean sample column names
+############################################################
+
+# Identify columns containing count data
+sample_cols_full <- grep("\\.clean\\.bam$", colnames(counts), value = TRUE)
+
+# Clean the names (remove paths)
+clean_names <- basename(sample_cols_full)
+colnames(counts)[match(sample_cols_full, colnames(counts))] <- clean_names
+
+# Re-detect sample columns using the new clean names
+sample_cols <- grep("\\.clean\\.bam$", colnames(counts), value = TRUE)
+
+############################################################
+## 3. Build count matrix
+############################################################
+
+# Ensure feature IDs are unique
+counts$feature_id <- make.unique(as.character(counts$Geneid))
+
+# Extract count data matrix
+counts_mat <- as.matrix(counts[, sample_cols])
+
+# CRITICAL for Fractional Counts: Round to nearest integer BEFORE setting mode
+# This preserves data like 10.9 -> 11 instead of truncating to 10
+counts_mat <- round(counts_mat)
+storage.mode(counts_mat) <- "integer"
+
+# Replace NAs with 0
+counts_mat[is.na(counts_mat)] <- 0L
+
+# Set rownames
+rownames(counts_mat) <- counts$feature_id
+
+cat("Matrix Dimensions for Analysis:", dim(counts_mat), "\n")
+
+############################################################
+## 4. Define Case vs Control 
+############################################################
+
+# 1. Define ONLY the Controls
+control_ids <- c("SRR8375295", "SRR8375316", "SRR8375354", "SRR8375398")
+
+# 2. Extract Sample IDs from columns
+current_cols <- colnames(counts_mat)
+sample_ids_stripped <- sub("\\.clean\\.bam$", "", current_cols)
+
+# 3. Create Metadata
+coldata <- data.frame(
+  row.names = current_cols,
+  SampleID  = sample_ids_stripped,
+  condition = NA
+)
+
+# 4. Apply Logic: If in control list -> Control, Else -> Case
+coldata$condition <- ifelse(coldata$SampleID %in% control_ids, "control", "case")
+
+# 5. Set "control" as the Reference Level (Denominator)
+coldata$condition <- factor(coldata$condition, levels = c("control", "case"))
+
+# Check your group sizes
+print("Sample Grouping Counts:")
+print(table(coldata$condition))
+
+############################################################
+## 5. Run DESeq2 (Skipping filtering as requested)
+############################################################
+
+dds <- DESeqDataSetFromMatrix(
+  countData = counts_mat,
+  colData   = coldata,
+  design    = ~ condition
+)
+
+# Run the pipeline
+dds <- DESeq(dds)
+
+# Get Results (Case / Control)
+res <- results(dds)
+
+# Order by significance
+res_ordered <- res[order(res$padj), ]
+
+# Export Results
+write.csv(as.data.frame(res_ordered), 
+          file = "/depot/yinili/data/Li_lab/GSE124439_Hammell2019/motor_cortex_(medial)/T2T_CHM13v2_gene_expression_counts_lateral_Unique_DESeq2_results_12_9_2025.csv")
+
+############################################################
+## 6. Visualization
+############################################################
+
+# --- A. PCA Plot ---
+vsd <- vst(dds, blind = FALSE)
+pcaData <- plotPCA(vsd, intgroup = "condition", returnData = TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+ggplot(pcaData, aes(PC1, PC2, color = condition)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  ggtitle("PCA Plot: Case vs Control") +
+  theme_bw()
+
+# --- B. Volcano Plot ---
+res_df <- as.data.frame(res)
+# Mark Significant: padj < 0.05 AND |log2FC| > 1
+res_df$Significant <- ifelse(res_df$padj < 0.05 & abs(res_df$log2FoldChange) > 1, "Yes", "No")
+res_df$Significant[is.na(res_df$Significant)] <- "No"
+
+ggplot(res_df, aes(x = log2FoldChange, y = -log10(pvalue))) +
+  geom_point(aes(color = Significant), alpha = 0.6, size = 1.5) +
+  scale_color_manual(values = c("grey", "red")) +
+  theme_bw() +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+  ggtitle("Volcano Plot")
+
+# --- C. Heatmap of Top 50 Genes ---
+res_clean <- subset(res_ordered, !is.na(padj))
+top_genes <- rownames(res_clean)[1:50]
+mat_top   <- assay(vsd)[top_genes, ]
+
+anno_col <- data.frame(Condition = coldata$condition)
+rownames(anno_col) <- colnames(mat_top)
+
+pheatmap(mat_top,
+         scale = "row",
+         annotation_col = anno_col,
+         show_rownames = TRUE,
+         show_colnames = FALSE,
+         main = "Top 50 DEGs (VST Z-score)")
+
+############################################################
+## 7. Summary Counts
+############################################################
+
+sig_res <- subset(res_df, padj < 0.05 & abs(log2FoldChange) > 1)
+up_genes   <- subset(sig_res, log2FoldChange > 1)
+down_genes <- subset(sig_res, log2FoldChange < -1)
+
+cat("----------------------------------\n")
+cat("Summary of Significant Genes (padj < 0.05, |LFC| > 1):\n")
+cat("Total Significant:", nrow(sig_res), "\n")
+cat("Upregulated:      ", nrow(up_genes), "\n")
+cat("Downregulated:    ", nrow(down_genes), "\n")
+cat("----------------------------------\n")
+```
