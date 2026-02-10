@@ -19,52 +19,155 @@ This work flowing this paper:
 ```text
 
 GSE124439_RNAseq/
-           # counts per subregion/case-control
+├─ README.md
+├─ LICENSE
+├─ .gitignore
+├─ CITATION.cff
+├─ environment/
+│  ├─ modules_purdue.md                 # module load recipes + versions
+│  ├─ containers.md                     # (optional) apptainer/singularity images used
+│  └─ renv/                             # (optional) R env lockfiles
+│     ├─ renv.lock
+│     └─ renv_activate.R
+├─ docs/
+│  ├─ paper_notes.md                    # mapping to Hammell 2019 methods
+│  ├─ decisions_log.md                  # parameter choices + rationale
+│  ├─ troubleshooting.md                # common SRA/HISAT2/featureCounts issues
+│  └─ qc_thresholds.md                  # QC rules (min reads, dup, MT, rRNA, etc.)
 ├─ metadata/
-│  ├─ SraRunTable.csv                # master table (if you keep one)
-│  ├─ SraRunTable_Frontal_Cortex.csv
-│  ├─ SraRunTable_motor_cortex_lateral.csv
-│  ├─ SraRunTable_motor_cortex_medial.csv
-│  ├─ Frontal_cortex_case.txt
-│  ├─ Frontal_cortex_control.txt
-│  ├─ motor_cortex_lateral_case.txt
-│  ├─ motor_cortex_lateral_control.txt
-│  ├─ motor_cortex_medial_case.txt
-│  └─ motor_cortex_medial_control.txt
+│  ├─ SraRunTable.csv
+│  ├─ subregions/
+│  │  ├─ SraRunTable_Frontal_Cortex.csv
+│  │  ├─ SraRunTable_motor_cortex_lateral.csv
+│  │  └─ SraRunTable_motor_cortex_medial.csv
+│  ├─ lists/
+│  │  ├─ Frontal_cortex_case.txt
+│  │  ├─ Frontal_cortex_control.txt
+│  │  ├─ motor_cortex_lateral_case.txt
+│  │  ├─ motor_cortex_lateral_control.txt
+│  │  ├─ motor_cortex_medial_case.txt
+│  │  └─ motor_cortex_medial_control.txt
+│  └─ sample_sheet_templates/
+│     ├─ sample_sheet_case_control.tsv  # standard sample sheet template
+│     └─ sample_sheet_subregion.tsv
+├─ references/
+│  ├─ T2T_CHM13v2.0/
+│  │  ├─ genome/
+│  │  │  ├─ chm13v2.0.fa
+│  │  │  └─ chm13v2.0.fa.fai
+│  │  ├─ hisat2_index/
+│  │  │  ├─ chm13_index.1.ht2
+│  │  │  ├─ chm13_index.2.ht2
+│  │  │  ├─ chm13_index.3.ht2
+│  │  │  ├─ chm13_index.4.ht2
+│  │  │  ├─ chm13_index.5.ht2
+│  │  │  ├─ chm13_index.6.ht2
+│  │  │  ├─ chm13_index.7.ht2
+│  │  │  └─ chm13_index.8.ht2
+│  │  └─ annotations/
+│  │     ├─ T2T_CHM13v2_hs1_liftoff_genes.gtf
+│  │     ├─ chm13_rRNA.chr.bed
+│  │     └─ README_annotations.md
+│  └─ repeatmasker/
+│     ├─ T2T_CHM13v2_hs1_repeatmasker.gtf
+│     └─ README_repeatmasker.md
 ├─ adapters/
-│  └─ TruSeq3-PE.fa                  # adapter file (text; OK to version)
+│  ├─ TruSeq3-PE.fa
+│  └─ README_adapters.md
 ├─ scripts/
-│  ├─ download/
-│  │  ├─ prefetch_list.sh            # from list -> .sra cache
-│  │  └─ fasterq_from_list.sh        # from list -> FASTQ (threads configurable)
-│  ├─ qc/
-│  │  ├─ summary_check.sh            # your checker; run inside fastq/
+│  ├─ 00_config/
+│  │  ├─ paths.sh                       # central paths (refs, project root)
+│  │  └─ params.yml                     # central parameters (threads, strandness, etc.)
+│  ├─ 01_download/
+│  │  ├─ prefetch_list.sh
+│  │  ├─ fasterq_from_list.sh
+│  │  └─ validate_sra_cache.sh
+│  ├─ 02_verify_fastq/
+│  │  ├─ summary_check.sh
+│  │  └─ verify_fastq_vs_metadata.sh
+│  ├─ 03_qc_raw/
 │  │  ├─ run_fastqc.sh
 │  │  └─ run_multiqc.sh
-│  ├─ trim/
-│  │  ├─ trimmomatic_params.md       # brief rationale of params
-│  │  ├─ run_trimmomatic_case.slurm
-│  │  └─ run_trimmomatic_control.slurm
-│  └─ util/
-│     └─ verify_fastq_vs_metadata.sh # comm-based cross-checks
+│  ├─ 04_trim/
+│  │  ├─ run_fastp.sh                   # one-liner loop version wrapped
+│  │  ├─ run_trimmomatic.sh             # optional alternative
+│  │  └─ trimmomatic_params.md
+│  ├─ 05_align_hisat2/
+│  │  ├─ build_hisat2_index.sh
+│  │  ├─ align_hisat2_paired.sh          # creates sorted BAM + index
+│  │  └─ split_strands.sh                # forward/reverse strand BAMs (optional)
+│  ├─ 06_bam_cleanup_qc/
+│  │  ├─ markdup_removeMT_removeRRNA.slurm
+│  │  └─ parse_cleanup_summary.py        # optional: aggregate cleanup_summary.tsv
+│  ├─ 07_counting/
+│  │  ├─ featurecounts_genes_fractional.sh
+│  │  ├─ featurecounts_genes_unique.sh
+│  │  ├─ featurecounts_te_fractional.sh
+│  │  └─ featurecounts_te_unique.sh
+│  ├─ 08_filter_counts/
+│  │  ├─ filter_counts_min5_all_samples.R
+│  │  └─ filter_counts_min5_to_zero_then_drop.R
+│  └─ 09_differential_expression/
+│     ├─ deseq2_genes_case_vs_control.R
+│     ├─ deseq2_te_case_vs_control.R
+│     └─ plotting_helpers.R
 ├─ regions/
 │  ├─ Frontal_Cortex/
 │  │  ├─ case/
-│  │  │  ├─ fastq/                   # (git-ignored)
-│  │  │  ├─ trim_trimmomatic/        # (git-ignored)
-│  │  │  ├─ qc/                      # (git-ignored)
-│  │  │  └─ logs/                    # (git-ignored)
+│  │  │  ├─ 01_sra/                      # prefetch cache (.sra) (git-ignored)
+│  │  │  ├─ 02_fastq_raw/                # raw fastq (git-ignored)
+│  │  │  ├─ 03_qc_raw/                   # fastqc/multiqc (git-ignored)
+│  │  │  ├─ 04_trim_fastp/               # trimmed fastq (git-ignored)
+│  │  │  ├─ 05_qc_fastp/                 # fastp html/json + multiqc (git-ignored)
+│  │  │  ├─ 06_bam_sorted/               # hisat2 sorted bams (git-ignored)
+│  │  │  ├─ 07_bam_clean/                # dedup/noMT/noRRNA clean bams (git-ignored)
+│  │  │  └─ logs/                        # logs (git-ignored)
 │  │  └─ control/
-│  │     ├─ fastq/                   # (git-ignored)
-│  │     ├─ trim_trimmomatic/        # (git-ignored)
-│  │     ├─ qc/                      # (git-ignored)
-│  │     └─ logs/                    # (git-ignored)
-│  ├─ motor_cortex_(lateral)/
-│  │  ├─ case/ ... (same as above)
-│  │  └─ control/ ... 
-│  └─ motor_cortex_(medial)/
-│     ├─ case/ ... (same as above)
-│     └─ control/ ...
+│  │     ├─ 01_sra/
+│  │     ├─ 02_fastq_raw/
+│  │     ├─ 03_qc_raw/
+│  │     ├─ 04_trim_fastp/
+│  │     ├─ 05_qc_fastp/
+│  │     ├─ 06_bam_sorted/
+│  │     ├─ 07_bam_clean/
+│  │     └─ logs/
+│  ├─ Motor_Cortex_Lateral/
+│  │  ├─ case/   (same structure as above)
+│  │  └─ control/(same structure as above)
+│  └─ Motor_Cortex_Medial/
+│     ├─ case/   (same structure as above)
+│     └─ control/(same structure as above)
+├─ results/
+│  ├─ qc/
+│  │  ├─ fastqc_multiqc_reports/
+│  │  ├─ fastp_reports/
+│  │  └─ bam_cleanup/
+│  │     ├─ cleanup_summary.tsv
+│  │     └─ per_region_cleanup_summaries/
+│  ├─ counts/
+│  │  ├─ genes/
+│  │  │  ├─ fractional/
+│  │  │  ├─ unique/
+│  │  │  └─ filtered/
+│  │  └─ transposable_elements/
+│  │     ├─ fractional/
+│  │     ├─ unique/
+│  │     └─ filtered/
+│  └─ deseq2/
+│     ├─ Frontal_Cortex/
+│     │  ├─ genes_case_vs_control/
+│     │  │  ├─ results.csv
+│     │  │  ├─ pca.png
+│     │  │  ├─ volcano.png
+│     │  │  └─ heatmap_top50.png
+│     │  └─ te_case_vs_control/
+│     ├─ Motor_Cortex_Lateral/
+│     └─ Motor_Cortex_Medial/
+└─ notebooks/
+   ├─ 01_metadata_qc.ipynb              # optional exploratory notebooks
+   ├─ 02_qc_summary.ipynb
+   └─ 03_deseq2_results_review.ipynb
+
                    
 ```
 ````
